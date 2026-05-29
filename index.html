@@ -535,6 +535,18 @@ async function saveOrder() {
   if (!name) { alert('請輸入客戶姓名'); return; }
   if (items.length === 0) { alert('請至少加入一項月餅'); return; }
 
+  // 檢查重複品項
+  const nameCount = {};
+  items.forEach(i => { nameCount[i.name] = (nameCount[i.name] || 0) + 1; });
+  const duplicates = Object.keys(nameCount).filter(n => nameCount[n] > 1);
+  if (duplicates.length > 0) {
+    if (!confirm('品項重複：' + duplicates.join('、') + '\n要合併數量還是繼續儲存？\n\n按「確定」= 合併數量\n按「取消」= 不儲存')) return;
+    const merged = {};
+    items.forEach(i => { merged[i.name] = (merged[i.name] || 0) + i.qty; });
+    items.length = 0;
+    Object.entries(merged).forEach(([n, q]) => items.push({ name: n, qty: q }));
+  }
+
   if (editingId) {
     const idx = ordersCache.findIndex(o => o.id === editingId);
     if (idx !== -1) {
