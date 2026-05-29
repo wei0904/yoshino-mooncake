@@ -535,16 +535,21 @@ async function saveOrder() {
   if (!name) { alert('請輸入客戶姓名'); return; }
   if (items.length === 0) { alert('請至少加入一項月餅'); return; }
 
-  // 檢查重複品項
-  const nameCount = {};
-  items.forEach(i => { nameCount[i.name] = (nameCount[i.name] || 0) + 1; });
-  const duplicates = Object.keys(nameCount).filter(n => nameCount[n] > 1);
-  if (duplicates.length > 0) {
-    if (!confirm('品項重複：' + duplicates.join('、') + '\n要合併數量還是繼續儲存？\n\n按「確定」= 合併數量\n按「取消」= 不儲存')) return;
-    const merged = {};
-    items.forEach(i => { merged[i.name] = (merged[i.name] || 0) + i.qty; });
-    items.length = 0;
-    Object.entries(merged).forEach(([n, q]) => items.push({ name: n, qty: q }));
+  // 檢查是否有重複訂單（同姓名、同電話、同日期、同品項）
+  const existing = ordersCache.find(o => {
+    if (editingId && o.id === editingId) return false;
+    if (o.customer !== name) return false;
+    if (phone && o.phone && o.phone !== phone) return false;
+    if (pickup && o.pickupDate && o.pickupDate !== pickup) return false;
+    const existItems = o.items.map(i => i.name).sort().join(',');
+    const newItems = items.map(i => i.name).sort().join(',');
+    return existItems === newItems;
+  });
+  if (existing) {
+    if (!confirm('已有相似訂單：\n' + existing.customer + (existing.phone ? ' ' + existing.phone : '') +
+      '\n品項：' + existing.items.map(i => i.name + ' x' + i.qty).join('、') +
+      (existing.pickupDate ? '\n取貨：' + formatDate(existing.pickupDate) : '') +
+      '\n\n是否仍要儲存？')) return;
   }
 
   if (editingId) {
