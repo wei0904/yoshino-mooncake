@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(ipconfig:*)",
+      "Bash(railway:*)",
+      "Bash(npm install:*)",
+      "Bash(where:*)",
+      "Bash(git:*)"
+    ]
+  }
+}

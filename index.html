@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>吉野村現烤蛋糕 - 月餅訂單系統</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6d3a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="月餅訂單">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; background: #f5f0e8; color: #333; min-height: 100vh; }
+
+.header {
+  background: linear-gradient(135deg, #6d3a1a, #b8652a);
+  color: white; padding: 18px 28px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  position: sticky; top: 0; z-index: 100;
+}
+.header h1 { font-size: 24px; letter-spacing: 2px; }
+.header .subtitle { font-size: 12px; opacity: 0.8; margin-top: 2px; letter-spacing: 1px; }
+
+.tabs {
+  display: flex; background: #fff; border-bottom: 3px solid #D2691E;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  position: sticky; top: 62px; z-index: 99;
+}
+.tab {
+  padding: 14px 28px; cursor: pointer; font-size: 15px; font-weight: bold;
+  border: none; background: none; color: #999; transition: all 0.3s;
+  border-bottom: 3px solid transparent; margin-bottom: -3px;
+  position: relative;
+}
+.tab:hover { color: #8B4513; background: #fdf6ee; }
+.tab.active { color: #6d3a1a; border-bottom-color: #D2691E; background: #fdf6ee; }
+.tab-badge {
+  position: absolute; top: 6px; right: 8px;
+  background: #c62828; color: white; font-size: 10px;
+  padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center;
+}
+
+.container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+.card {
+  background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.card h2 {
+  color: #6d3a1a; margin-bottom: 18px; font-size: 17px;
+  border-bottom: 2px solid #f0e0c8; padding-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.form-row { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
+.form-group label { font-size: 13px; color: #888; margin-bottom: 5px; font-weight: bold; }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 10px 14px; border: 1.5px solid #e0d6cc; border-radius: 8px; font-size: 15px;
+  font-family: inherit; background: #fdfbf8; transition: all 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: #D2691E; box-shadow: 0 0 0 3px rgba(210,105,30,0.12);
+  background: #fff;
+}
+
+.items-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.items-table th {
+  background: linear-gradient(135deg, #f9f3eb, #f0e8dd);
+  color: #8B4513; padding: 10px 14px; text-align: left; font-size: 13px;
+  border-bottom: 2px solid #e8d5c0;
+}
+.items-table td { padding: 8px 14px; border-bottom: 1px solid #f0e8dd; }
+.items-table select, .items-table input {
+  width: 100%; padding: 8px 10px; border: 1.5px solid #e0d6cc;
+  border-radius: 6px; font-size: 14px; background: #fdfbf8;
+}
+.items-table .qty-input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; }
+
+.btn {
+  padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: bold; font-family: inherit; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, #D2691E, #b8562a); color: white; box-shadow: 0 2px 6px rgba(210,105,30,0.3); }
+.btn-primary:hover { background: linear-gradient(135deg, #b8562a, #8B4513); }
+.btn-success { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; box-shadow: 0 2px 6px rgba(46,125,50,0.3); }
+.btn-success:hover { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
+.btn-danger { background: #e53935; color: white; }
+.btn-danger:hover { background: #c62828; }
+.btn-secondary { background: #9e9e9e; color: white; }
+.btn-secondary:hover { background: #757575; }
+.btn-sm { padding: 5px 14px; font-size: 12px; border-radius: 6px; }
+.btn-outline { background: transparent; border: 1.5px solid #D2691E; color: #D2691E; }
+.btn-outline:hover { background: #D2691E; color: white; }
+
+.btn-group { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* Order Cards */
+.order-card {
+  background: white; border-radius: 10px; padding: 16px 18px; margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 5px solid #D2691E;
+  transition: all 0.2s;
+}
+.order-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
+.order-card.packed { border-left-color: #43a047; background: #f9fdf9; }
+.order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+.order-id { font-weight: bold; color: #6d3a1a; font-size: 13px; background: #f5ebe0; padding: 2px 8px; border-radius: 4px; }
+.order-customer { font-size: 16px; font-weight: bold; margin-left: 6px; }
+.order-items {
+  margin: 10px 0; padding: 10px 14px; background: #fdf8f2; border-radius: 8px;
+  font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px;
+}
+.order-items .item-tag {
+  background: #f0e0c8; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: bold;
+  color: #6d3a1a;
+}
+.order-meta { font-size: 12px; color: #aaa; }
+
+.status-badge {
+  padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;
+}
+.status-pending { background: #fff3e0; color: #e65100; }
+.status-packed { background: #e8f5e9; color: #2e7d32; }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: white; border-radius: 12px; padding: 20px; text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04);
+}
+.stat-card .number { font-size: 40px; font-weight: bold; color: #D2691E; line-height: 1; }
+.stat-card .label { font-size: 13px; color: #999; margin-top: 8px; }
+
+.summary-table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
+.summary-table th {
+  background: linear-gradient(135deg, #6d3a1a, #8B4513);
+  color: white; padding: 12px 18px; text-align: left; font-size: 13px;
+}
+.summary-table td { padding: 12px 18px; border-bottom: 1px solid #f0e8dd; }
+.summary-table tr:hover { background: #fdf6ee; }
+.summary-table .total-row { background: #fff8f0; font-weight: bold; border-top: 2px solid #D2691E; }
+
+/* Packing */
+.date-group {
+  margin-bottom: 24px;
+}
+.date-group-header {
+  background: linear-gradient(135deg, #6d3a1a, #8B4513);
+  color: white; padding: 12px 20px; border-radius: 10px 10px 0 0;
+  font-size: 16px; font-weight: bold;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.date-group-header .date-summary {
+  font-size: 12px; opacity: 0.85; font-weight: normal;
+}
+.date-group-body {
+  background: #fdfbf8; border: 1px solid #e8d5c0; border-top: none;
+  border-radius: 0 0 10px 10px; padding: 8px;
+}
+.pack-item {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  background: white; border-radius: 8px; margin: 6px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;
+  border: 1px solid #f0e8dd;
+}
+.pack-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.pack-item.done { background: #f0f8f0; border-color: #c8e6c9; }
+.pack-item.done .pack-info .name { text-decoration: line-through; color: #aaa; }
+.pack-item input[type="checkbox"] {
+  width: 22px; height: 22px; cursor: pointer; accent-color: #43a047;
+  flex-shrink: 0;
+}
+.pack-info { flex: 1; }
+.pack-info .name { font-weight: bold; font-size: 15px; color: #333; }
+.pack-info .detail { font-size: 13px; color: #888; margin-top: 4px; }
+.pack-info .detail .item-tag-sm {
+  display: inline-block; background: #f0e0c8; padding: 1px 8px; border-radius: 10px;
+  font-size: 12px; color: #6d3a1a; font-weight: bold; margin-right: 4px;
+}
+.pack-order-num { font-size: 11px; color: #bbb; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; }
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.filter-bar input, .filter-bar select {
+  padding: 10px 14px; border: 1.5px solid #e0d6cc; border-radius: 8px; font-size: 14px;
+  background: white; font-family: inherit;
+}
+.filter-bar input { flex: 1; min-width: 150px; }
+
+.section { display: none; }
+.section.active { display: block; }
+
+.empty-msg { text-align: center; padding: 50px 20px; color: #ccc; font-size: 16px; }
+
+.product-settings { margin-top: 12px; }
+.product-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.product-row input {
+  padding: 8px 12px; border: 1.5px solid #e0d6cc; border-radius: 6px;
+  font-size: 14px; background: #fdfbf8;
+}
+
+.cloud-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; margin-top: 4px; display: inline-block; }
+.cloud-ok { background: rgba(255,255,255,0.2); color: #a5d6a7; }
+.cloud-err { background: rgba(255,255,255,0.15); color: #ffcdd2; }
+.cloud-loading { background: rgba(255,255,255,0.15); color: #ffe0b2; }
+
+/* Progress bar */
+.progress-bar { background: #e0d6cc; border-radius: 10px; height: 12px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+.progress-fill.low { background: linear-gradient(90deg, #ff9800, #f57c00); }
+.progress-fill.mid { background: linear-gradient(90deg, #fdd835, #f9a825); }
+.progress-fill.high { background: linear-gradient(90deg, #66bb6a, #43a047); }
+
+@media print {
+  .header, .tabs, .btn, .btn-group, .filter-bar, .no-print { display: none !important; }
+  .section { display: block !important; }
+  .container { max-width: 100%; padding: 0; }
+  body { background: white; }
+  .card { box-shadow: none; border: 1px solid #ddd; }
+  .date-group-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+@media (max-width: 600px) {
+  .header { padding: 14px 16px; }
+  .header h1 { font-size: 18px; }
+  .form-row { flex-direction: column; }
+  .form-group { min-width: 100%; }
+  .tab { padding: 12px 16px; font-size: 13px; }
+  .container { padding: 12px 8px; }
+  .card { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>吉野村現烤蛋糕</h1>
+    <div class="subtitle">月餅訂單管理系統</div>
+  </div>
+  <div style="text-align:right">
+    <div id="headerStats" style="font-size:13px;opacity:0.9"></div>
+    <div id="cloudStatus" class="cloud-status cloud-loading">連線中...</div>
+  </div>
+</div>
+
+<div class="tabs" id="tabBar">
+  <button class="tab active" onclick="switchTab('orders', this)">訂單管理</button>
+  <button class="tab" onclick="switchTab('stats', this)">生產統計</button>
+  <button class="tab" onclick="switchTab('packing', this)">包裝清單<span class="tab-badge" id="packingBadge" style="display:none"></span></button>
+  <button class="tab" onclick="switchTab('settings', this)">產品設定</button>
+</div>
+
+<!-- ===== 訂單管理 ===== -->
+<div id="section-orders" class="section active">
+<div class="container">
+
+  <div class="card" id="orderFormCard">
+    <h2 id="formTitle">新增訂單</h2>
+    <input type="hidden" id="editingOrderId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>客戶姓名 *</label>
+        <input type="text" id="customerName" placeholder="請輸入姓名">
+      </div>
+      <div class="form-group">
+        <label>聯絡電話</label>
+        <input type="text" id="customerPhone" placeholder="請輸入電話">
+      </div>
+      <div class="form-group">
+        <label>取貨日期</label>
+        <input type="date" id="pickupDate">
+      </div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>月餅品項</th>
+          <th style="width:100px;text-align:center">數量</th>
+          <th style="width:50px"></th>
+        </tr>
+      </thead>
+      <tbody id="orderItems"></tbody>
+    </table>
+    <button class="btn btn-outline btn-sm" onclick="addItemRow()">+ 增加品項</button>
+
+    <div class="form-row" style="margin-top:14px">
+      <div class="form-group">
+        <label>備註</label>
+        <textarea id="orderNote" rows="2" placeholder="特殊需求或備註"></textarea>
+      </div>
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="resetForm()">清除</button>
+      <button class="btn btn-primary" onclick="saveOrder()">儲存訂單</button>
+    </div>
+  </div>
+
+  <div class="filter-bar no-print">
+    <input type="text" id="searchInput" placeholder="搜尋客戶姓名或電話..." oninput="renderOrders()">
+    <select id="filterStatus" onchange="renderOrders()">
+      <option value="all">全部訂單</option>
+      <option value="pending">未包裝</option>
+      <option value="packed">已包裝</option>
+    </select>
+    <select id="filterPickup" onchange="renderOrders()">
+      <option value="all">全部日期</option>
+    </select>
+  </div>
+
+  <div id="orderList"></div>
+</div>
+</div>
+
+<!-- ===== 生產統計 ===== -->
+<div id="section-stats" class="section">
+<div class="container">
+  <div class="card">
+    <h2>生產統計總覽</h2>
+    <div class="stats-grid" id="statsGrid"></div>
+    <table class="summary-table" id="summaryTable"></table>
+    <div class="btn-group no-print" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="window.print()">列印統計表</button>
+      <button class="btn btn-outline" onclick="exportCSV()">匯出 CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>依取貨日期統計</h2>
+    <div id="dateStatsCards"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== 包裝清單 ===== -->
+<div id="section-packing" class="section">
+<div class="container">
+  <div class="card">
+    <h2>包裝進度</h2>
+    <div class="stats-grid" id="packingStats" style="margin-bottom:8px"></div>
+    <div class="progress-bar" style="margin-bottom:20px">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="btn-group no-print" style="margin-bottom:20px">
+      <button class="btn btn-primary" onclick="window.print()">列印包裝清單</button>
+    </div>
+    <div id="packingList"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== 產品設定 ===== -->
+<div id="section-settings" class="section">
+<div class="container">
+  <div class="card">
+    <h2>月餅產品設定</h2>
+    <p style="color:#999;font-size:13px;margin-bottom:14px">設定可選的月餅品項，新增訂單時會自動帶入。</p>
+    <div id="productList" class="product-settings"></div>
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="addProductRow()">+ 新增品項</button>
+      <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>資料管理</h2>
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="exportData()">匯出所有資料 (備份)</button>
+      <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">匯入資料 (還原)</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-danger" onclick="clearAllData()">清除所有資料</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ===========================================
+// ===== Firebase 設定 (請填入你的設定) =====
+// ===========================================
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+let db = null;
+let useCloud = false;
+let ordersCache = [];
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  if (firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+    db.collection('orders').limit(1).get().then(() => {
+      useCloud = true;
+      setCloudStatus('ok', '雲端已連線');
+      loadOrdersFromCloud();
+      loadProductsFromCloud();
+    }).catch(err => {
+      setCloudStatus('err', '本機模式');
+      loadLocal();
+    });
+  } else {
+    setCloudStatus('err', '尚未設定雲端');
+    loadLocal();
+  }
+} catch(e) {
+  setCloudStatus('err', '本機模式');
+  loadLocal();
+}
+
+function setCloudStatus(type, text) {
+  const el = document.getElementById('cloudStatus');
+  el.className = 'cloud-status cloud-' + type;
+  el.textContent = text;
+}
+
+function loadLocal() {
+  ordersCache = JSON.parse(localStorage.getItem('yoshino_orders') || '[]');
+  renderOrders(); updatePickupFilter(); updateHeaderStats();
+}
+
+function loadOrdersFromCloud() {
+  db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+    ordersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderOrders(); updatePickupFilter(); updateHeaderStats();
+    localStorage.setItem('yoshino_orders', JSON.stringify(ordersCache));
+  });
+}
+
+function loadProductsFromCloud() {
+  db.collection('settings').doc('products').onSnapshot(doc => {
+    if (doc.exists) localStorage.setItem('yoshino_products', JSON.stringify(doc.data().list));
+  });
+}
+
+async function cloudSaveOrder(order) { if (useCloud) await db.collection('orders').doc(order.id).set(order); }
+async function cloudDeleteOrder(id) { if (useCloud) await db.collection('orders').doc(id).delete(); }
+async function cloudUpdateOrder(id, data) { if (useCloud) await db.collection('orders').doc(id).update(data); }
+
+// ===== Data =====
+const DEFAULT_PRODUCTS = [
+  { name: '蛋黃酥' },
+  { name: '鹹蛋黃酥' },
+  { name: '綠豆凸' },
+  { name: '芋頭酥' },
+];
+
+function getProducts() {
+  const saved = localStorage.getItem('yoshino_products');
+  return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+}
+function getOrders() { return ordersCache; }
+function saveOrdersLocal(orders) {
+  ordersCache = orders;
+  localStorage.setItem('yoshino_orders', JSON.stringify(orders));
+}
+
+// ===== Tabs =====
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelector('#section-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'stats') renderStats();
+  if (tab === 'packing') renderPacking();
+  if (tab === 'settings') renderProductSettings();
+  if (tab === 'orders') { renderOrders(); updatePickupFilter(); }
+}
+
+// ===== Order Form =====
+function addItemRow(product = '', qty = '') {
+  const tbody = document.getElementById('orderItems');
+  const tr = document.createElement('tr');
+  const products = getProducts();
+  const options = products.map(p => '<option value="' + p.name + '">' + p.name + '</option>').join('');
+
+  tr.innerHTML =
+    '<td><select><option value="">-- 請選擇 --</option>' + options +
+    '<option value="__custom">自訂品項...</option></select>' +
+    '<input type="text" class="custom-name" placeholder="自訂品名" style="display:none;margin-top:4px" value=""></td>' +
+    '<td style="text-align:center"><input type="number" class="qty-input" min="1" value="' + qty + '" placeholder="0"></td>' +
+    '<td><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">X</button></td>';
+  tbody.appendChild(tr);
+
+  const select = tr.querySelector('select');
+  const customInput = tr.querySelector('.custom-name');
+  select.addEventListener('change', function() {
+    if (this.value === '__custom') { customInput.style.display = 'block'; customInput.focus(); }
+    else { customInput.style.display = 'none'; customInput.value = ''; }
+  });
+
+  if (product) {
+    const found = Array.from(select.options).find(o => o.value === product);
+    if (found) { select.value = product; }
+    else { select.value = '__custom'; customInput.style.display = 'block'; customInput.value = product; }
+  }
+}
+
+function getFormItems() {
+  const items = [];
+  document.querySelectorAll('#orderItems tr').forEach(tr => {
+    const select = tr.querySelector('select');
+    const customName = tr.querySelector('.custom-name').value.trim();
+    const name = select.value === '__custom' ? customName : select.value;
+    const qty = parseInt(tr.querySelector('.qty-input').value) || 0;
+    if (name && qty > 0) items.push({ name, qty });
+  });
+  return items;
+}
+
+async function saveOrder() {
+  const name = document.getElementById('customerName').value.trim();
+  const phone = document.getElementById('customerPhone').value.trim();
+  const pickup = document.getElementById('pickupDate').value;
+  const note = document.getElementById('orderNote').value.trim();
+  const items = getFormItems();
+  const editingId = document.getElementById('editingOrderId').value;
+
+  if (!name) { alert('請輸入客戶姓名'); return; }
+  if (items.length === 0) { alert('請至少加入一項月餅'); return; }
+
+  if (editingId) {
+    const idx = ordersCache.findIndex(o => o.id === editingId);
+    if (idx !== -1) {
+      ordersCache[idx].customer = name;
+      ordersCache[idx].phone = phone;
+      ordersCache[idx].pickupDate = pickup;
+      ordersCache[idx].note = note;
+      ordersCache[idx].items = items;
+      saveOrdersLocal(ordersCache);
+      await cloudSaveOrder(ordersCache[idx]);
+    }
+  } else {
+    const order = {
+      id: 'ORD-' + Date.now().toString(36).toUpperCase(),
+      customer: name, phone: phone, pickupDate: pickup, note: note,
+      items: items, status: 'pending', createdAt: new Date().toISOString(),
+    };
+    ordersCache.unshift(order);
+    saveOrdersLocal(ordersCache);
+    await cloudSaveOrder(order);
+  }
+
+  resetForm(); renderOrders(); updatePickupFilter(); updateHeaderStats();
+  alert(editingId ? '訂單已更新!' : '訂單已儲存!');
+}
+
+function resetForm() {
+  document.getElementById('customerName').value = '';
+  document.getElementById('customerPhone').value = '';
+  document.getElementById('pickupDate').value = '';
+  document.getElementById('orderNote').value = '';
+  document.getElementById('orderItems').innerHTML = '';
+  document.getElementById('editingOrderId').value = '';
+  document.getElementById('formTitle').textContent = '新增訂單';
+  addItemRow();
+}
+
+function editOrder(id) {
+  const order = ordersCache.find(o => o.id === id);
+  if (!order) return;
+  document.getElementById('editingOrderId').value = id;
+  document.getElementById('formTitle').textContent = '編輯訂單 - ' + order.customer;
+  document.getElementById('customerName').value = order.customer;
+  document.getElementById('customerPhone').value = order.phone || '';
+  document.getElementById('pickupDate').value = order.pickupDate || '';
+  document.getElementById('orderNote').value = order.note || '';
+  document.getElementById('orderItems').innerHTML = '';
+  order.items.forEach(item => addItemRow(item.name, item.qty));
+  document.getElementById('orderFormCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function deleteOrder(id) {
+  if (!confirm('確定要刪除這筆訂單嗎?')) return;
+  ordersCache = ordersCache.filter(o => o.id !== id);
+  saveOrdersLocal(ordersCache);
+  await cloudDeleteOrder(id);
+  renderOrders(); updatePickupFilter(); updateHeaderStats();
+}
+
+async function toggleStatus(id) {
+  const order = ordersCache.find(o => o.id === id);
+  if (order) {
+    order.status = order.status === 'packed' ? 'pending' : 'packed';
+    saveOrdersLocal(ordersCache);
+    await cloudUpdateOrder(id, { status: order.status });
+    renderOrders(); updateHeaderStats();
+  }
+}
+
+// ===== Order List =====
+function renderOrders() {
+  const orders = getOrders();
+  const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('filterStatus')?.value || 'all';
+  const pickupFilter = document.getElementById('filterPickup')?.value || 'all';
+
+  const filtered = orders.filter(o => {
+    if (search && !o.customer.toLowerCase().includes(search) && !(o.phone || '').includes(search)) return false;
+    if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+    if (pickupFilter !== 'all' && o.pickupDate !== pickupFilter) return false;
+    return true;
+  });
+
+  const container = document.getElementById('orderList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-msg">目前沒有訂單</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(o => {
+    const itemTags = o.items.map(i => '<span class="item-tag">' + i.name + ' x' + i.qty + '</span>').join('');
+    return '<div class="order-card ' + (o.status === 'packed' ? 'packed' : '') + '">' +
+      '<div class="order-header"><div>' +
+        '<span class="order-id">' + o.id + '</span>' +
+        '<span class="order-customer">' + o.customer + '</span>' +
+        (o.phone ? ' <span class="order-meta">' + o.phone + '</span>' : '') +
+      '</div><div style="display:flex;gap:6px;align-items:center">' +
+        '<span class="status-badge ' + (o.status === 'packed' ? 'status-packed' : 'status-pending') + '">' +
+          (o.status === 'packed' ? '已包裝' : '未包裝') + '</span>' +
+      '</div></div>' +
+      '<div class="order-items">' + itemTags + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
+        '<div class="order-meta">' +
+          (o.pickupDate ? '取貨: ' + formatDate(o.pickupDate) : '') +
+          (o.note ? ' | 備註: ' + o.note : '') +
+        '</div>' +
+        '<div class="no-print" style="display:flex;gap:4px">' +
+          '<button class="btn btn-sm ' + (o.status === 'packed' ? 'btn-secondary' : 'btn-success') + '" onclick="toggleStatus(\'' + o.id + '\')">' +
+            (o.status === 'packed' ? '取消包裝' : '標記已包裝') + '</button>' +
+          '<button class="btn btn-outline btn-sm" onclick="editOrder(\'' + o.id + '\')">編輯</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteOrder(\'' + o.id + '\')">刪除</button>' +
+        '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + ['日','一','二','三','四','五','六'][d.getDay()] + ')';
+}
+
+function updatePickupFilter() {
+  const orders = getOrders();
+  const dates = [...new Set(orders.map(o => o.pickupDate).filter(Boolean))].sort();
+  const select = document.getElementById('filterPickup');
+  const current = select.value;
+  select.innerHTML = '<option value="all">全部日期</option>' +
+    dates.map(d => '<option value="' + d + '">' + formatDate(d) + '</option>').join('');
+  if (dates.includes(current)) select.value = current;
+}
+
+// ===== Stats =====
+function renderStats() {
+  const orders = getOrders();
+  const productMap = {};
+  let totalQty = 0;
+
+  orders.forEach(o => {
+    o.items.forEach(i => {
+      if (!productMap[i.name]) productMap[i.name] = 0;
+      productMap[i.name] += i.qty;
+      totalQty += i.qty;
+    });
+  });
+
+  document.getElementById('statsGrid').innerHTML =
+    '<div class="stat-card"><div class="number">' + orders.length + '</div><div class="label">總訂單數</div></div>' +
+    '<div class="stat-card"><div class="number">' + totalQty + '</div><div class="label">月餅總數量</div></div>' +
+    '<div class="stat-card"><div class="number">' + orders.filter(o => o.status === 'packed').length + '/' + orders.length + '</div><div class="label">已包裝/全部</div></div>';
+
+  const sorted = Object.entries(productMap).sort((a, b) => b[1] - a[1]);
+  document.getElementById('summaryTable').innerHTML =
+    '<thead><tr><th>品項</th><th style="text-align:right">總數量</th></tr></thead><tbody>' +
+    sorted.map(([name, qty]) =>
+      '<tr><td>' + name + '</td><td style="text-align:right;font-size:20px;font-weight:bold;color:#6d3a1a">' + qty + '</td></tr>'
+    ).join('') +
+    '<tr class="total-row"><td>合計</td><td style="text-align:right;font-size:22px;color:#c62828">' + totalQty + '</td></tr></tbody>';
+
+  // Date stats as cards
+  const dateMap = {};
+  orders.forEach(o => {
+    const d = o.pickupDate || '未指定日期';
+    if (!dateMap[d]) dateMap[d] = { orders: 0, items: {}, packed: 0 };
+    dateMap[d].orders++;
+    if (o.status === 'packed') dateMap[d].packed++;
+    o.items.forEach(i => {
+      if (!dateMap[d].items[i.name]) dateMap[d].items[i.name] = 0;
+      dateMap[d].items[i.name] += i.qty;
+    });
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const dateEntries = Object.entries(dateMap)
+    .filter(([date]) => date === '未指定日期' || date >= today)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  document.getElementById('dateStatsCards').innerHTML = dateEntries.length === 0
+    ? '<div class="empty-msg">沒有未來的取貨日期</div>'
+    : dateEntries.map(([date, data]) => {
+    const itemList = Object.entries(data.items).map(([n, q]) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #f0e8dd">' +
+        '<span style="font-size:16px">' + n + '</span>' +
+        '<span style="font-weight:bold;color:#fff;background:#D2691E;font-size:22px;padding:4px 16px;border-radius:8px;min-width:60px;text-align:center">' + q + '</span></div>'
+    ).join('');
+    return '<div class="card" style="border-left:4px solid #D2691E">' +
+      '<h2 style="border:none;padding:0;margin-bottom:10px">' + (date === '未指定日期' ? date : formatDate(date)) +
+      '<span style="font-size:13px;color:#999;font-weight:normal;margin-left:auto">' + data.orders + ' 筆訂單 | ' + data.packed + ' 已包裝</span></h2>' +
+      itemList + '</div>';
+  }).join('');
+}
+
+// ===== Packing =====
+function renderPacking() {
+  const orders = getOrders();
+  const pending = orders.filter(o => o.status !== 'packed');
+  const packed = orders.filter(o => o.status === 'packed');
+  const total = orders.length;
+  const pct = total > 0 ? Math.round(packed.length / total * 100) : 0;
+
+  document.getElementById('packingStats').innerHTML =
+    '<div class="stat-card"><div class="number" style="color:#e65100">' + pending.length + '</div><div class="label">待包裝</div></div>' +
+    '<div class="stat-card"><div class="number" style="color:#43a047">' + packed.length + '</div><div class="label">已完成</div></div>' +
+    '<div class="stat-card"><div class="number">' + pct + '%</div><div class="label">完成率</div></div>';
+
+  const fill = document.getElementById('progressFill');
+  fill.style.width = pct + '%';
+  fill.className = 'progress-fill ' + (pct < 40 ? 'low' : pct < 75 ? 'mid' : 'high');
+
+  // Update badge
+  const badge = document.getElementById('packingBadge');
+  if (pending.length > 0) { badge.style.display = ''; badge.textContent = pending.length; }
+  else { badge.style.display = 'none'; }
+
+  // Group by date
+  const dateGroups = {};
+  orders.forEach(o => {
+    const d = o.pickupDate || '9999-未指定日期';
+    if (!dateGroups[d]) dateGroups[d] = [];
+    dateGroups[d].push(o);
+  });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const sortedDates = Object.keys(dateGroups).sort().filter(d =>
+    d.startsWith('9999') || d >= todayStr
+  );
+  if (sortedDates.length === 0) {
+    document.getElementById('packingList').innerHTML = '<div class="empty-msg">目前沒有訂單</div>';
+    return;
+  }
+
+  let html = '';
+  sortedDates.forEach(dateKey => {
+    const groupOrders = dateGroups[dateKey];
+    const datePending = groupOrders.filter(o => o.status !== 'packed');
+    const datePacked = groupOrders.filter(o => o.status === 'packed');
+    const sorted = [...datePending, ...datePacked];
+
+    const displayDate = dateKey.startsWith('9999') ? '未指定日期' : formatDate(dateKey);
+
+    // Aggregate items for this date
+    const dateItems = {};
+    groupOrders.forEach(o => o.items.forEach(i => {
+      if (!dateItems[i.name]) dateItems[i.name] = 0;
+      dateItems[i.name] += i.qty;
+    }));
+    const summaryText = Object.entries(dateItems).map(([n, q]) => n + ' x' + q).join('、');
+
+    html += '<div class="date-group">' +
+      '<div class="date-group-header"><span>' + displayDate + ' (' + datePacked.length + '/' + groupOrders.length + ' 已完成)</span>' +
+        '<span class="date-summary">' + summaryText + '</span></div>' +
+      '<div class="date-group-body">';
+
+    sorted.forEach(o => {
+      const itemTags = o.items.map(i => '<span class="item-tag-sm">' + i.name + ' x' + i.qty + '</span>').join(' ');
+      html += '<div class="pack-item ' + (o.status === 'packed' ? 'done' : '') + '">' +
+        '<input type="checkbox" ' + (o.status === 'packed' ? 'checked' : '') +
+          ' onchange="toggleStatus(\'' + o.id + '\');renderPacking()">' +
+        '<div class="pack-info">' +
+          '<div class="name">' + o.customer + (o.phone ? ' <span style="font-weight:normal;color:#aaa;font-size:13px">' + o.phone + '</span>' : '') + '</div>' +
+          '<div class="detail">' + itemTags +
+            (o.note ? ' <span style="color:#e65100">| ' + o.note + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<span class="pack-order-num">' + o.id + '</span>' +
+      '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  document.getElementById('packingList').innerHTML = html;
+}
+
+// ===== Product Settings =====
+function renderProductSettings() {
+  const products = getProducts();
+  document.getElementById('productList').innerHTML = products.map(p =>
+    '<div class="product-row">' +
+      '<input type="text" value="' + p.name + '" placeholder="品名" style="flex:1">' +
+      '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">X</button></div>'
+  ).join('');
+}
+
+function addProductRow() {
+  const container = document.getElementById('productList');
+  const div = document.createElement('div');
+  div.className = 'product-row';
+  div.innerHTML = '<input type="text" value="" placeholder="品名" style="flex:1">' +
+    '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">X</button>';
+  container.appendChild(div);
+}
+
+async function saveProducts() {
+  const rows = document.querySelectorAll('#productList .product-row');
+  const products = [];
+  rows.forEach(row => {
+    const name = row.querySelector('input').value.trim();
+    if (name) products.push({ name });
+  });
+  localStorage.setItem('yoshino_products', JSON.stringify(products));
+  if (useCloud) await db.collection('settings').doc('products').set({ list: products });
+  alert('產品設定已儲存!');
+}
+
+// ===== Export/Import =====
+function exportCSV() {
+  const orders = getOrders();
+  const productMap = {};
+  orders.forEach(o => o.items.forEach(i => {
+    if (!productMap[i.name]) productMap[i.name] = 0;
+    productMap[i.name] += i.qty;
+  }));
+
+  let csv = '\uFEFF品項,總數量\n';
+  Object.entries(productMap).sort((a, b) => b[1] - a[1]).forEach(([name, qty]) => { csv += name + ',' + qty + '\n'; });
+  csv += '\n\n訂單編號,客戶,電話,取貨日期,品項,數量,狀態,備註\n';
+  orders.forEach(o => {
+    o.items.forEach(i => {
+      csv += [o.id, o.customer, o.phone||'', o.pickupDate||'', i.name, i.qty, o.status==='packed'?'已包裝':'未包裝', o.note||''].join(',') + '\n';
+    });
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = '吉野村月餅訂單_' + new Date().toISOString().slice(0, 10) + '.csv';
+  link.click();
+}
+
+function exportData() {
+  const data = { orders: getOrders(), products: getProducts(), exportDate: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = '吉野村月餅系統備份_' + new Date().toISOString().slice(0, 10) + '.json';
+  link.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.orders) {
+        if (!confirm('將匯入 ' + data.orders.length + ' 筆訂單，現有資料會被覆蓋，確定嗎?')) return;
+        saveOrdersLocal(data.orders);
+        if (data.products) localStorage.setItem('yoshino_products', JSON.stringify(data.products));
+        if (useCloud) {
+          for (const order of data.orders) await db.collection('orders').doc(order.id).set(order);
+          if (data.products) await db.collection('settings').doc('products').set({ list: data.products });
+        }
+        renderOrders(); updatePickupFilter(); updateHeaderStats();
+        alert('資料匯入成功!');
+      }
+    } catch (err) { alert('檔案格式錯誤'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function clearAllData() {
+  if (!confirm('確定要清除所有訂單資料嗎? 此操作無法復原!')) return;
+  if (!confirm('再次確認：真的要刪除全部資料嗎?')) return;
+  if (useCloud) {
+    const snapshot = await db.collection('orders').get();
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  ordersCache = [];
+  localStorage.removeItem('yoshino_orders');
+  renderOrders(); updatePickupFilter(); updateHeaderStats();
+  alert('所有資料已清除');
+}
+
+function updateHeaderStats() {
+  const orders = getOrders();
+  const pending = orders.filter(o => o.status !== 'packed').length;
+  document.getElementById('headerStats').innerHTML = '訂單: ' + orders.length + ' 筆 | 待包裝: ' + pending + ' 筆';
+  // Update packing badge
+  const badge = document.getElementById('packingBadge');
+  if (pending > 0) { badge.style.display = ''; badge.textContent = pending; }
+  else { badge.style.display = 'none'; }
+}
+
+// ===== PWA =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// ===== Init =====
+addItemRow();
+renderOrders();
+updatePickupFilter();
+updateHeaderStats();
+</script>
+</body>
+</html>

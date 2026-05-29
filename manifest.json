@@ -1,0 +1,22 @@
+{
+  "name": "吉野村月餅訂單系統",
+  "short_name": "月餅訂單",
+  "description": "吉野村現烤蛋糕 - 月餅訂單管理系統",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#6d3a1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
