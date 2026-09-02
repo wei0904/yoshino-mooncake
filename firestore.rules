@@ -18,7 +18,7 @@ service cloud.firestore {
     function isShop() {
       return request.auth != null
         && request.auth.token.email in [
-          'emma22417@shop.com'
+          'emma22417@gmail.com'
         ];
     }
 
