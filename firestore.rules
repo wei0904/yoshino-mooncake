@@ -1,0 +1,18 @@
+// 吉野村月餅系統 — Firestore 安全性規則
+//
+// 用法：console.firebase.google.com → 選 yoshino-mooncake 專案
+//       → 左側「Firestore Database」→ 上方「規則」分頁
+//       → 把整個編輯框的內容換成下面這段 → 按「發布」
+//
+// 注意：這段規則是「任何人只要知道網址就能讀寫」，適合店內自用。
+//       如果之後想加密碼保護，再改成需要登入的版本。
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

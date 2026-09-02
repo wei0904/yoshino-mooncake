@@ -28,10 +28,12 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   display: flex; background: #fff; border-bottom: 3px solid #D2691E;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   position: sticky; top: 62px; z-index: 99;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
+.tab { white-space: nowrap; }
 .tab {
   padding: 14px 28px; cursor: pointer; font-size: 15px; font-weight: bold;
-  border: none; background: none; color: #999; transition: all 0.3s;
+  border: none; background: none; color: #6e6e6e; transition: all 0.3s;
   border-bottom: 3px solid transparent; margin-bottom: -3px;
   position: relative;
 }
@@ -58,7 +60,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 
 .form-row { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 .form-group { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
-.form-group label { font-size: 13px; color: #888; margin-bottom: 5px; font-weight: bold; }
+.form-group label { font-size: 13px; color: #5c5c5c; margin-bottom: 5px; font-weight: bold; }
 .form-group input, .form-group select, .form-group textarea {
   padding: 10px 14px; border: 1.5px solid #e0d6cc; border-radius: 8px; font-size: 15px;
   font-family: inherit; background: #fdfbf8; transition: all 0.2s;
@@ -68,18 +70,94 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   background: #fff;
 }
 
-.items-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-.items-table th {
-  background: linear-gradient(135deg, #f9f3eb, #f0e8dd);
-  color: #8B4513; padding: 10px 14px; text-align: left; font-size: 13px;
-  border-bottom: 2px solid #e8d5c0;
+/* ===== 訂單照片 ===== */
+.ai-box {
+  background: linear-gradient(135deg, #fff8ef, #fdf1e2);
+  border: 1.5px dashed #d9b48a; border-radius: 12px;
+  padding: 16px; margin-bottom: 18px;
 }
-.items-table td { padding: 8px 14px; border-bottom: 1px solid #f0e8dd; }
-.items-table select, .items-table input {
-  width: 100%; padding: 8px 10px; border: 1.5px solid #e0d6cc;
-  border-radius: 6px; font-size: 14px; background: #fdfbf8;
+.ai-box .ai-title {
+  font-size: 15px; font-weight: bold; color: #8B4513;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
-.items-table .qty-input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; }
+.ai-box .ai-title small { font-weight: normal; color: #8B4513; font-size: 12px; }
+
+/* ===== 照片 ===== */
+.photo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.photo-thumb {
+  position: relative; width: 84px; height: 84px; border-radius: 8px; overflow: hidden;
+  border: 1.5px solid #e0d6cc; background: #eee;
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block; }
+.photo-thumb .rm {
+  position: absolute; top: 2px; right: 2px; background: rgba(198,40,40,0.92); color: #fff;
+  border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
+  font-size: 11px; line-height: 20px; padding: 0; text-align: center;
+}
+.order-photos { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.order-photos img {
+  width: 54px; height: 54px; object-fit: cover; border-radius: 6px;
+  border: 1px solid #e0d6cc; cursor: pointer;
+}
+.lightbox {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+/* ===== 品項卡片 ===== */
+.item-card {
+  border: 1.5px solid #e8dcce; border-radius: 10px; padding: 12px;
+  margin-bottom: 10px; background: #fdfbf8;
+}
+.item-card-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.item-card-head .item-no { font-weight: bold; color: #8B4513; font-size: 14px; }
+
+.fill-head {
+  margin-top: 12px; font-size: 12px; font-weight: bold; color: #6e6e6e;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.fill-count { font-weight: bold; }
+.fill-count.ok { color: #2e7d32; }
+.fill-count.warn { color: #e65100; }
+.fill-list { margin: 6px 0; }
+.fill-row {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap;
+}
+.fill-row .f-name { flex: 1; min-width: 120px; }
+.fill-row .f-per { width: 62px; text-align: center; font-weight: bold; }
+.fill-row .f-unit { font-size: 13px; color: #6e6e6e; }
+.fill-row .f-custom { flex-basis: 100%; }
+.fill-row .rm-fill { padding: 5px 10px; }
+.item-card select, .item-card input {
+  padding: 8px 10px; border: 1.5px solid #e0d6cc; border-radius: 6px;
+  font-size: 14px; background: #fff; font-family: inherit; width: 100%;
+}
+.item-card select:focus, .item-card input:focus {
+  outline: none; border-color: #D2691E; box-shadow: 0 0 0 3px rgba(210,105,30,0.12);
+}
+.item-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px; margin-top: 10px;
+}
+.item-fields label { font-size: 12px; color: #6e6e6e; font-weight: bold; display: block; margin-bottom: 3px; }
+.item-sub {
+  margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e8dcce;
+  font-size: 13px; color: #8B4513;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+.item-sub b { font-size: 18px; color: #c62828; }
+
+.totals-bar {
+  margin-top: 16px; padding: 14px 16px; background: #fff8f0;
+  border: 1.5px solid #f0dcc0; border-radius: 10px;
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between;
+}
+.totals-bar .grand { font-size: 13px; color: #8B4513; font-weight: bold; }
+.totals-bar .grand b { font-size: 30px; color: #c62828; display: block; line-height: 1.1; margin-top: 2px; }
+.totals-bar .money-in { display: flex; gap: 10px; }
+.totals-bar .money-in .form-group { min-width: 106px; flex: 0 0 auto; }
 
 .btn {
   padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer;
@@ -87,6 +165,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   display: inline-flex; align-items: center; gap: 6px;
 }
 .btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: linear-gradient(135deg, #D2691E, #b8562a); color: white; box-shadow: 0 2px 6px rgba(210,105,30,0.3); }
 .btn-primary:hover { background: linear-gradient(135deg, #b8562a, #8B4513); }
 .btn-success { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; box-shadow: 0 2px 6px rgba(46,125,50,0.3); }
@@ -113,14 +192,37 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 .order-id { font-weight: bold; color: #6d3a1a; font-size: 13px; background: #f5ebe0; padding: 2px 8px; border-radius: 4px; }
 .order-customer { font-size: 16px; font-weight: bold; margin-left: 6px; }
 .order-items {
-  margin: 10px 0; padding: 10px 14px; background: #fdf8f2; border-radius: 8px;
-  font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 10px 0; padding: 6px 14px; background: #fdf8f2; border-radius: 8px;
 }
-.order-items .item-tag {
-  background: #f0e0c8; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: bold;
-  color: #6d3a1a;
+.box-item { padding: 9px 0; border-bottom: 1px dashed #ecdfd0; }
+.box-item:last-child { border-bottom: none; }
+.box-spec { font-size: 16px; font-weight: bold; color: #5a2f12; }
+.box-spec .spec-sub { font-size: 14px; color: #8B4513; font-weight: bold; }
+.box-spec .spec-boxes { color: #c62828; }
+.box-fills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.fill-chip {
+  background: #fff; border: 1.5px solid #d9b48a; border-radius: 8px;
+  padding: 4px 12px; font-size: 15px; font-weight: bold; color: #5a2f12;
+  display: inline-flex; align-items: baseline; gap: 7px;
+  white-space: nowrap;
 }
-.order-meta { font-size: 12px; color: #aaa; }
+.fill-chip b { font-size: 19px; color: #c1560f; }
+.order-meta { font-size: 13px; color: #6e6e6e; }
+
+/* 取貨日期時間 — 顯眼一點 */
+.pickup-line {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #fdf3e7; border-left: 4px solid #D2691E;
+  border-radius: 8px; padding: 8px 14px; margin: 10px 0;
+}
+.pickup-line.no-time { background: #f7f7f7; border-left-color: #ccc; }
+.pickup-label { font-size: 12px; color: #8B4513; font-weight: bold; }
+.pickup-date { font-size: 20px; font-weight: bold; color: #6d3a1a; }
+.pickup-time {
+  font-size: 24px; font-weight: bold; color: #fff;
+  background: #D2691E; padding: 2px 14px; border-radius: 8px; letter-spacing: 1px;
+}
+.pickup-notime { font-size: 14px; color: #6e6e6e; }
 
 .status-badge {
   padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;
@@ -128,14 +230,20 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 .status-pending { background: #fff3e0; color: #e65100; }
 .status-packed { background: #e8f5e9; color: #2e7d32; }
 
+.money-tag {
+  background: #fff3e0; color: #c62828; font-weight: bold; padding: 3px 11px;
+  border-radius: 11px; font-size: 13px; white-space: nowrap;
+}
+.money-tag.paid { background: #e8f5e9; color: #2e7d32; }
+
 /* Stats */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
 .stat-card {
   background: white; border-radius: 12px; padding: 20px; text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04);
 }
-.stat-card .number { font-size: 40px; font-weight: bold; color: #D2691E; line-height: 1; }
-.stat-card .label { font-size: 13px; color: #999; margin-top: 8px; }
+.stat-card .number { font-size: 36px; font-weight: bold; color: #D2691E; line-height: 1; }
+.stat-card .label { font-size: 13px; color: #6e6e6e; margin-top: 8px; }
 
 .summary-table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
 .summary-table th {
@@ -147,18 +255,14 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 .summary-table .total-row { background: #fff8f0; font-weight: bold; border-top: 2px solid #D2691E; }
 
 /* Packing */
-.date-group {
-  margin-bottom: 24px;
-}
+.date-group { margin-bottom: 24px; }
 .date-group-header {
   background: linear-gradient(135deg, #6d3a1a, #8B4513);
   color: white; padding: 12px 20px; border-radius: 10px 10px 0 0;
   font-size: 16px; font-weight: bold;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
 }
-.date-group-header .date-summary {
-  font-size: 12px; opacity: 0.85; font-weight: normal;
-}
+.date-group-header .date-summary { font-size: 12px; opacity: 0.85; font-weight: normal; }
 .date-group-body {
   background: #fdfbf8; border: 1px solid #e8d5c0; border-top: none;
   border-radius: 0 0 10px 10px; padding: 8px;
@@ -171,19 +275,21 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 }
 .pack-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .pack-item.done { background: #f0f8f0; border-color: #c8e6c9; }
-.pack-item.done .pack-info .name { text-decoration: line-through; color: #aaa; }
+.pack-item.done .pack-info .name { text-decoration: line-through; color: #6e6e6e; }
 .pack-item input[type="checkbox"] {
-  width: 22px; height: 22px; cursor: pointer; accent-color: #43a047;
-  flex-shrink: 0;
+  width: 22px; height: 22px; cursor: pointer; accent-color: #43a047; flex-shrink: 0;
 }
-.pack-info { flex: 1; }
+.pack-info { flex: 1; min-width: 0; }
 .pack-info .name { font-weight: bold; font-size: 15px; color: #333; }
-.pack-info .detail { font-size: 13px; color: #888; margin-top: 4px; }
-.pack-info .detail .item-tag-sm {
-  display: inline-block; background: #f0e0c8; padding: 1px 8px; border-radius: 10px;
-  font-size: 12px; color: #6d3a1a; font-weight: bold; margin-right: 4px;
+.pack-info .detail { font-size: 13px; color: #5c5c5c; margin-top: 6px; }
+.pack-boxes { margin-top: 4px; }
+.pack-boxes .box-item { padding: 6px 0; }
+.pack-item.done .pack-boxes { opacity: 0.5; }
+.pack-time {
+  background: #D2691E; color: #fff; font-size: 22px; font-weight: bold;
+  padding: 4px 14px; border-radius: 8px; white-space: nowrap; letter-spacing: 1px;
 }
-.pack-order-num { font-size: 11px; color: #bbb; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; }
+.pack-order-num { font-size: 12px; color: #7a7a7a; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; }
 
 .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
 .filter-bar input, .filter-bar select {
@@ -195,29 +301,42 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 .section { display: none; }
 .section.active { display: block; }
 
-.empty-msg { text-align: center; padding: 50px 20px; color: #ccc; font-size: 16px; }
+.empty-msg { text-align: center; padding: 50px 20px; color: #9a9a9a; font-size: 16px; }
 
-.product-settings { margin-top: 12px; }
-.product-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-.product-row input {
-  padding: 8px 12px; border: 1.5px solid #e0d6cc; border-radius: 6px;
-  font-size: 14px; background: #fdfbf8;
+/* 價格表 */
+.price-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; }
+.price-table { border-collapse: collapse; min-width: 100%; }
+.price-table th {
+  background: linear-gradient(135deg, #f9f3eb, #f0e8dd); color: #8B4513;
+  padding: 8px 6px; font-size: 12px; border-bottom: 2px solid #e8d5c0;
+  white-space: nowrap;
 }
+.price-table td { padding: 5px 4px; border-bottom: 1px solid #f0e8dd; }
+.price-table input {
+  padding: 7px 8px; border: 1.5px solid #e0d6cc; border-radius: 6px;
+  font-size: 14px; background: #fdfbf8; font-family: inherit;
+}
+.price-table .p-name { width: 160px; }
+.price-table .p-price { width: 90px; text-align: center; }
 
 .cloud-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; margin-top: 4px; display: inline-block; }
 .cloud-ok { background: rgba(255,255,255,0.2); color: #a5d6a7; }
 .cloud-err { background: rgba(255,255,255,0.15); color: #ffcdd2; }
+.cloud-wait { background: rgba(255,255,255,0.15); color: #ffe082; }
 .cloud-loading { background: rgba(255,255,255,0.15); color: #ffe0b2; }
 
-/* Progress bar */
 .progress-bar { background: #e0d6cc; border-radius: 10px; height: 12px; overflow: hidden; margin: 8px 0; }
 .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
 .progress-fill.low { background: linear-gradient(90deg, #ff9800, #f57c00); }
 .progress-fill.mid { background: linear-gradient(90deg, #fdd835, #f9a825); }
 .progress-fill.high { background: linear-gradient(90deg, #66bb6a, #43a047); }
 
+.hint { color: #6e6e6e; font-size: 13px; line-height: 1.7; }
+.date-hint { font-size: 12px; color: #8B4513; margin-top: 4px; min-height: 16px; font-weight: bold; }
+.date-hint.err { color: #c62828; }
+
 @media print {
-  .header, .tabs, .btn, .btn-group, .filter-bar, .no-print { display: none !important; }
+  .header, .tabs, .btn, .btn-group, .filter-bar, .no-print, .ai-box { display: none !important; }
   .section { display: block !important; }
   .container { max-width: 100%; padding: 0; }
   body { background: white; }
@@ -230,9 +349,10 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   .header h1 { font-size: 18px; }
   .form-row { flex-direction: column; }
   .form-group { min-width: 100%; }
-  .tab { padding: 12px 16px; font-size: 13px; }
+  .tab { padding: 12px 14px; font-size: 13px; }
   .container { padding: 12px 8px; }
   .card { padding: 16px; }
+  .totals-bar { flex-direction: column; align-items: stretch; }
 }
 </style>
 </head>
@@ -250,19 +370,33 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 </div>
 
 <div class="tabs" id="tabBar">
-  <button class="tab active" onclick="switchTab('orders', this)">訂單管理</button>
+  <button class="tab active" onclick="switchTab('new', this)">新增訂單</button>
+  <button class="tab" onclick="switchTab('orders', this)">訂單列表<span class="tab-badge" id="ordersBadge" style="display:none"></span></button>
   <button class="tab" onclick="switchTab('stats', this)">生產統計</button>
   <button class="tab" onclick="switchTab('packing', this)">包裝清單<span class="tab-badge" id="packingBadge" style="display:none"></span></button>
   <button class="tab" onclick="switchTab('settings', this)">產品設定</button>
 </div>
 
-<!-- ===== 訂單管理 ===== -->
-<div id="section-orders" class="section active">
+<!-- ===== 新增訂單 ===== -->
+<div id="section-new" class="section active">
 <div class="container">
 
   <div class="card" id="orderFormCard">
     <h2 id="formTitle">新增訂單</h2>
     <input type="hidden" id="editingOrderId">
+
+    <!-- 訂單照片 -->
+    <div class="ai-box no-print">
+      <div class="ai-title">📷 訂單照片 <small>拍下手寫訂單或對話截圖存起來，之後點開就能對照</small></div>
+      <div class="btn-group" style="margin-top:10px">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('photoCamera').click()">📷 拍照</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('photoGallery').click()">🖼 從相簿選</button>
+      </div>
+      <input type="file" id="photoCamera" accept="image/*" capture="environment" multiple style="display:none" onchange="handlePhotoPick(event)">
+      <input type="file" id="photoGallery" accept="image/*" multiple style="display:none" onchange="handlePhotoPick(event)">
+      <div id="photoPreview" class="photo-grid"></div>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label>客戶姓名 *</label>
@@ -274,21 +408,36 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
       </div>
       <div class="form-group">
         <label>取貨日期</label>
-        <input type="date" id="pickupDate">
+        <input type="text" id="pickupDateText" placeholder="打 9/15 就好" inputmode="numeric"
+               oninput="onPickupDateInput(false)" onblur="onPickupDateInput(true)">
+        <input type="hidden" id="pickupDate">
+        <div id="pickupDateHint" class="date-hint"></div>
+      </div>
+      <div class="form-group" style="max-width:150px">
+        <label>取貨時間</label>
+        <input type="time" id="pickupTime" step="300">
       </div>
     </div>
 
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th>月餅品項</th>
-          <th style="width:100px;text-align:center">數量</th>
-          <th style="width:50px"></th>
-        </tr>
-      </thead>
-      <tbody id="orderItems"></tbody>
-    </table>
+    <div id="orderItems"></div>
     <button class="btn btn-outline btn-sm" onclick="addItemRow()">+ 增加品項</button>
+
+    <div class="totals-bar">
+      <div class="grand">訂單總金額
+        <b id="grandTotal">$0</b>
+        <span id="totalPieces" style="font-size:12px;color:#8B4513;font-weight:normal"></span>
+      </div>
+      <div class="money-in">
+        <div class="form-group">
+          <label>訂金</label>
+          <input type="number" id="depositInput" min="0" placeholder="0" oninput="recalcTotals()">
+        </div>
+        <div class="form-group">
+          <label>尾款</label>
+          <input type="text" id="balanceOut" readonly style="background:#f5f0e8;font-weight:bold">
+        </div>
+      </div>
+    </div>
 
     <div class="form-row" style="margin-top:14px">
       <div class="form-group">
@@ -299,10 +448,15 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 
     <div class="btn-group" style="justify-content:flex-end">
       <button class="btn btn-secondary" onclick="resetForm()">清除</button>
-      <button class="btn btn-primary" onclick="saveOrder()">儲存訂單</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveOrder()">儲存訂單</button>
     </div>
   </div>
+</div>
+</div>
 
+<!-- ===== 訂單列表 ===== -->
+<div id="section-orders" class="section">
+<div class="container">
   <div class="filter-bar no-print">
     <input type="text" id="searchInput" placeholder="搜尋客戶姓名或電話..." oninput="renderOrders()">
     <select id="filterStatus" onchange="renderOrders()">
@@ -324,8 +478,16 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div class="container">
   <div class="card">
     <h2>生產統計總覽</h2>
+    <div class="filter-bar no-print" style="margin-bottom:14px">
+      <span style="font-weight:bold;color:#8B4513;font-size:14px">統計範圍</span>
+      <select id="statsRange" onchange="renderStats()" style="flex:1;min-width:180px"></select>
+    </div>
+    <div id="statsRangeTitle" style="font-size:15px;font-weight:bold;color:#8B4513;margin-bottom:12px"></div>
     <div class="stats-grid" id="statsGrid"></div>
+    <h3 style="font-size:14px;color:#8B4513;margin:18px 0 8px">口味總需求（廚房要做幾顆）</h3>
     <table class="summary-table" id="summaryTable"></table>
+    <h3 style="font-size:14px;color:#8B4513;margin:22px 0 8px">盒子規格（要備幾個盒子）</h3>
+    <table class="summary-table" id="specTable"></table>
     <div class="btn-group no-print" style="margin-top:16px">
       <button class="btn btn-primary" onclick="window.print()">列印統計表</button>
       <button class="btn btn-outline" onclick="exportCSV()">匯出 CSV</button>
@@ -360,11 +522,44 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div id="section-settings" class="section">
 <div class="container">
   <div class="card">
-    <h2>月餅產品設定</h2>
-    <p style="color:#999;font-size:13px;margin-bottom:14px">設定可選的月餅品項，新增訂單時會自動帶入。</p>
-    <div id="productList" class="product-settings"></div>
+    <h2>價格設定</h2>
+    <p class="hint">算法是 <b>每顆單價 × 顆數 ＋ 盒子加價</b>。混搭禮盒也照這個算，不用另外設價。</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>每顆單價</label>
+        <input type="number" id="unitPriceInput" min="0" oninput="renderPricePreview()">
+      </div>
+      <div class="form-group">
+        <label>禮盒 6 入加價</label>
+        <input type="number" id="giftSixInput" min="0" oninput="renderPricePreview()">
+      </div>
+      <div class="form-group">
+        <label>禮盒 其他入數加價</label>
+        <input type="number" id="giftOtherInput" min="0" oninput="renderPricePreview()">
+      </div>
+      <div class="form-group">
+        <label>散裝加價</label>
+        <input type="number" id="looseInput" min="0" oninput="renderPricePreview()">
+      </div>
+    </div>
+    <h3 style="font-size:14px;color:#8B4513;margin:18px 0 8px">一盒賣多少（試算）</h3>
+    <table class="summary-table" id="pricePreview"></table>
     <div class="btn-group">
-      <button class="btn btn-outline" onclick="addProductRow()">+ 新增品項</button>
+      <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>月餅口味</h2>
+    <p class="hint">這些口味會出現在訂單的下拉選單。<b>單價欄留空就用上面的預設價</b>，只有比較貴的口味才需要另外填。</p>
+    <div class="price-scroll">
+      <table class="price-table">
+        <thead><tr><th style="text-align:left">口味</th><th>單價（留空＝預設）</th><th></th></tr></thead>
+        <tbody id="productList"></tbody>
+      </table>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="addProductRow()">+ 新增口味</button>
       <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
     </div>
   </div>
@@ -381,13 +576,16 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 </div>
 </div>
 
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('show')"><img src="" alt=""></div>
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 <script>
 // ===========================================
-// ===== Firebase 設定 (請填入你的設定) =====
+// ===== Firebase 設定 =====
 // ===========================================
 const firebaseConfig = {
   apiKey: "AIzaSyDBpASdM7q4vI7miLtplgDtWMPbkzHhKnw",
@@ -399,141 +597,571 @@ const firebaseConfig = {
 };
 
 let db = null;
+let storage = null;
 let useCloud = false;
 let ordersCache = [];
+let cloudError = '';
+let ordersUnsub = null;
+let productsUnsub = null;
+let retryTimer = null;
+let migrateAsked = false;
+let localOrdersAtBoot = [];   // 開機當下這台裝置的訂單，之後才不會被雲端快照蓋掉
 
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  if (firebaseConfig.apiKey !== 'YOUR_API_KEY') {
-    db.collection('orders').limit(1).get().then(() => {
-      useCloud = true;
-      setCloudStatus('ok', '雲端已連線');
-      loadOrdersFromCloud();
-      loadProductsFromCloud();
-    }).catch(err => {
-      setCloudStatus('err', '本機模式');
-      loadLocal();
+const CLOUD_RULES =
+  'rules_version = \'2\';\n' +
+  'service cloud.firestore {\n' +
+  '  match /databases/{database}/documents {\n' +
+  '    match /{document=**} {\n' +
+  '      allow read, write: if true;\n' +
+  '    }\n' +
+  '  }\n' +
+  '}';
+
+// 在整份程式都載入完之後才呼叫（見最下方 Init），避免用到還沒定義好的常數
+function bootCloud() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    try { storage = firebase.storage(); } catch (e) { storage = null; }
+    // 離線快取：手機收訊不好時照樣能看、能開單，恢復連線後自動補送到雲端
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    loadLocal();          // 先用上次的資料把畫面畫出來，不必等連線
+    startCloudSync();
+    // 手機切換 wifi／行動網路、或從背景切回來時，重新確認連線
+    window.addEventListener('online', () => { if (!useCloud) startCloudSync(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !useCloud) startCloudSync();
     });
-  } else {
-    setCloudStatus('err', '尚未設定雲端');
+  } catch (e) {
+    db = null;
+    cloudError = (e && (e.code || e.message)) || String(e);
+    setCloudStatus('err', '⚠ 本機模式（點我）');
     loadLocal();
   }
-} catch(e) {
-  setCloudStatus('err', '本機模式');
-  loadLocal();
+}
+
+// 建立即時同步：任何一台裝置改動，其他裝置的畫面會自動跟著更新
+function startCloudSync() {
+  if (!db) return;
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  if (ordersUnsub) { ordersUnsub(); ordersUnsub = null; }
+  if (productsUnsub) { productsUnsub(); productsUnsub = null; }
+  setCloudStatus('wait', '☁ 連線中…');
+
+  ordersUnsub = db.collection('orders').orderBy('createdAt', 'desc')
+    .onSnapshot({ includeMetadataChanges: true }, snapshot => {
+      onCloudConnected();
+      ordersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderOrders(); updatePickupFilter(); updateHeaderStats();
+      safeSetItem('yoshino_orders', JSON.stringify(ordersCache));
+      if (snapshot.metadata.hasPendingWrites) setCloudStatus('wait', '☁ 上傳中…');
+      else if (snapshot.metadata.fromCache) setCloudStatus('wait', '☁ 離線暫存（會自動補送）');
+      else setCloudStatus('ok', '☁ 已即時同步');
+      if (!snapshot.metadata.fromCache) offerMigrateLocalOrders(snapshot.empty);
+    }, onCloudError);
+
+  productsUnsub = db.collection('settings').doc('products')
+    .onSnapshot(doc => {
+      onCloudConnected();
+      if (!doc.exists) return;
+      const d = doc.data();
+      if (d.list) safeSetItem('yoshino_products', JSON.stringify(d.list));
+      if (d.pricing) safeSetItem('yoshino_pricing', JSON.stringify(d.pricing));
+      if (document.querySelector('#section-settings').classList.contains('active')) renderProductSettings();
+    }, onCloudError);
+}
+
+function onCloudConnected() {
+  useCloud = true;
+  cloudError = '';
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+}
+
+function onCloudError(err) {
+  cloudError = (err && (err.code || err.message)) || String(err);
+  useCloud = false;
+  setCloudStatus('err', '⚠ 本機模式（點我）');
+  // 規則沒開通、或網路真的不通時，每 20 秒自己再試一次，不用重新整理
+  if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; startCloudSync(); }, 20000);
+}
+
+// 第一次接上雲端、而雲端還是空的時候，把這台裝置的舊訂單推上去
+function offerMigrateLocalOrders(cloudEmpty) {
+  if (migrateAsked || !cloudEmpty) return;
+  migrateAsked = true;
+  // 用開機時記下來的那份，不能重讀 localStorage —— 它已經被雲端快照覆蓋成空的了
+  const local = localOrdersAtBoot;
+  if (!local.length) return;
+  if (!confirm('雲端目前沒有任何訂單，這台裝置有 ' + local.length + ' 筆舊訂單。\n\n要把它們上傳到雲端，讓其他手機也看得到嗎？')) return;
+  const batch = db.batch();
+  local.forEach(o => { if (o && o.id) batch.set(db.collection('orders').doc(o.id), o); });
+  batch.commit()
+    .then(() => alert('已上傳 ' + local.length + ' 筆訂單，其他裝置重新整理就會看到。'))
+    .catch(err => alert('上傳失敗：' + ((err && err.message) || err)));
 }
 
 function setCloudStatus(type, text) {
   const el = document.getElementById('cloudStatus');
   el.className = 'cloud-status cloud-' + type;
   el.textContent = text;
+  el.style.cursor = 'pointer';
+  el.onclick = showCloudInfo;
+}
+
+function showCloudInfo() {
+  if (useCloud) {
+    alert('☁ 雲端連線正常\n\n訂單會即時同步到所有裝置。\n在別台手機或電腦打開同一個網址，就會看到同一批訂單，\n而且對方一存檔，你這邊的畫面會自己更新，不用重新整理。');
+    return;
+  }
+  alert('⚠ 目前是本機模式：訂單只存在這台裝置，其他手機／電腦看不到。\n\n' +
+    '錯誤訊息：' + (cloudError || '（無）') + '\n\n' +
+    (String(cloudError).indexOf('permission') !== -1 || String(cloudError).indexOf('PERMISSION') !== -1
+      ? '這是「Firestore 安全性規則擋住了」。\n' +
+        '到 console.firebase.google.com → yoshino-mooncake →\n' +
+        'Firestore Database → 規則，整段換成下面這段再按「發布」：\n\n' +
+        CLOUD_RULES + '\n\n' +
+        '發布後回到這裡，會自動重新連線（最多等 20 秒）。'
+      : '請確認網路是否正常，或到 console.firebase.google.com →\n' +
+        'yoshino-mooncake → Firestore Database 確認資料庫已建立。\n\n' +
+        '程式每 20 秒會自動重試一次，不用一直重新整理。'));
 }
 
 function loadLocal() {
-  ordersCache = JSON.parse(localStorage.getItem('yoshino_orders') || '[]');
+  try { ordersCache = JSON.parse(localStorage.getItem('yoshino_orders') || '[]'); }
+  catch (e) { ordersCache = []; }
+  if (!Array.isArray(ordersCache)) ordersCache = [];
+  localOrdersAtBoot = ordersCache.slice();
   renderOrders(); updatePickupFilter(); updateHeaderStats();
 }
 
-function loadOrdersFromCloud() {
-  db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-    ordersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderOrders(); updatePickupFilter(); updateHeaderStats();
-    localStorage.setItem('yoshino_orders', JSON.stringify(ordersCache));
-  });
+function safeSetItem(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch (e) { console.warn('本機儲存空間不足：' + key); return false; }
 }
 
-function loadProductsFromCloud() {
-  db.collection('settings').doc('products').onSnapshot(doc => {
-    if (doc.exists) localStorage.setItem('yoshino_products', JSON.stringify(doc.data().list));
-  });
+// 寫入雲端不等伺服器回應：Firestore 會先在本機生效並自動排隊補送，
+// 這樣手機收訊差的時候，儲存按鈕才不會卡住不動。
+function cloudWrite(fn) {
+  if (!useCloud) return Promise.resolve();
+  try { fn().catch(reportWriteError); } catch (err) { reportWriteError(err); }
+  return Promise.resolve();
 }
 
-async function cloudSaveOrder(order) { if (useCloud) await db.collection('orders').doc(order.id).set(order); }
-async function cloudDeleteOrder(id) { if (useCloud) await db.collection('orders').doc(id).delete(); }
-async function cloudUpdateOrder(id, data) { if (useCloud) await db.collection('orders').doc(id).update(data); }
+function reportWriteError(err) {
+  const code = String((err && (err.code || err.message)) || err);
+  console.error('雲端寫入失敗：' + code);
+  // 只有「被規則擋住」才代表整個雲端不能用；其他單筆錯誤不該把全app打回本機模式
+  if (code.toLowerCase().indexOf('permission') !== -1) onCloudError(err);
+  else alert('這筆資料沒有同步到雲端：' + code);
+}
 
-// ===== Data =====
+function cloudSaveOrder(order) { return cloudWrite(() => db.collection('orders').doc(order.id).set(order)); }
+function cloudDeleteOrder(id) { return cloudWrite(() => db.collection('orders').doc(id).delete()); }
+function cloudUpdateOrder(id, data) { return cloudWrite(() => db.collection('orders').doc(id).update(data)); }
+
+// ===== 常數 =====
+const GIFT_UNITS = [6, 9, 10, 12, 15];
+const LOOSE_UNITS = [6];
+
+// 價格規則：每顆單價 × 顆數 ＋ 盒子加價
+const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, loose: 0 };
+
 const DEFAULT_PRODUCTS = [
-  { name: '蛋黃酥' },
-  { name: '鹹蛋黃酥' },
-  { name: '綠豆凸' },
-  { name: '芋頭酥' },
+  { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
+  { name: '芋頭酥' }, { name: '金月亮' },
 ];
 
+function getPricing() {
+  let p;
+  try { p = JSON.parse(localStorage.getItem('yoshino_pricing') || 'null'); }
+  catch (e) { p = null; }
+  p = p || {};
+  const pick = k => (p[k] != null && p[k] !== '') ? Number(p[k]) : DEFAULT_PRICING[k];
+  return { unitPrice: pick('unitPrice'), giftSix: pick('giftSix'), giftOther: pick('giftOther'), loose: pick('loose') };
+}
+
 function getProducts() {
-  const saved = localStorage.getItem('yoshino_products');
-  return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+  let list;
+  try { list = JSON.parse(localStorage.getItem('yoshino_products') || 'null'); }
+  catch (e) { list = null; }
+  if (!list || !list.length) list = DEFAULT_PRODUCTS;
+  return list.map(p => ({ name: p.name, price: Number(p.price) || 0 }));
+}
+
+// 盒子加價：禮盒 6 入一種價，其他入數另一種價，散裝不加
+function boxFee(pack, units) {
+  const pr = getPricing();
+  if (pack === '散裝') return pr.loose;
+  return Number(units) === 6 ? pr.giftSix : pr.giftOther;
+}
+
+// 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
+function calcBoxPrice(pack, units, fillings) {
+  const prods = getProducts();
+  const def = getPricing().unitPrice;
+  let sum = 0;
+  (fillings || []).forEach(f => {
+    const prod = prods.find(x => x.name === f.name);
+    const up = (prod && prod.price > 0) ? prod.price : def;
+    sum += up * (Number(f.per) || 0);
+  });
+  return sum + boxFee(pack, units);
 }
 function getOrders() { return ordersCache; }
 function saveOrdersLocal(orders) {
   ordersCache = orders;
-  localStorage.setItem('yoshino_orders', JSON.stringify(orders));
+  safeSetItem('yoshino_orders', JSON.stringify(orders));
 }
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function money(n) { return '$' + (Number(n) || 0).toLocaleString(); }
 
 // ===== Tabs =====
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelector('#section-' + tab).classList.add('active');
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   if (tab === 'stats') renderStats();
   if (tab === 'packing') renderPacking();
   if (tab === 'settings') renderProductSettings();
   if (tab === 'orders') { renderOrders(); updatePickupFilter(); }
 }
 
-// ===== Order Form =====
-function addItemRow(product = '', qty = '') {
-  const tbody = document.getElementById('orderItems');
-  const tr = document.createElement('tr');
-  const products = getProducts();
-  const options = products.map(p => '<option value="' + p.name + '">' + p.name + '</option>').join('');
+// 用分頁名稱切換（程式內部用）
+function gotoTab(tab) {
+  const label = { 'new': '新增訂單', orders: '訂單列表', stats: '生產統計', packing: '包裝清單', settings: '產品設定' }[tab];
+  const btn = Array.from(document.querySelectorAll('#tabBar .tab'))
+    .find(t => t.textContent.indexOf(label) !== -1);
+  switchTab(tab, btn);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-  tr.innerHTML =
-    '<td><select><option value="">-- 請選擇 --</option>' + options +
-    '<option value="__custom">自訂品項...</option></select>' +
-    '<input type="text" class="custom-name" placeholder="自訂品名" style="display:none;margin-top:4px" value=""></td>' +
-    '<td style="text-align:center"><input type="number" class="qty-input" min="1" value="' + qty + '" placeholder="0"></td>' +
-    '<td><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">X</button></td>';
-  tbody.appendChild(tr);
+// ===== 品項卡片：一個「盒子」底下可以放多種口味 =====
+function addItemRow(item) {
+  item = item || {};
+  const container = document.getElementById('orderItems');
+  const div = document.createElement('div');
+  div.className = 'item-card';
 
-  const select = tr.querySelector('select');
-  const customInput = tr.querySelector('.custom-name');
-  select.addEventListener('change', function() {
-    if (this.value === '__custom') { customInput.style.display = 'block'; customInput.focus(); }
-    else { customInput.style.display = 'none'; customInput.value = ''; }
+  div.innerHTML =
+    '<div class="item-card-head">' +
+      '<span class="item-no"></span>' +
+      '<button class="btn btn-danger btn-sm del-item">刪除這盒</button>' +
+    '</div>' +
+    '<div class="item-fields">' +
+      '<div><label>包裝</label><select class="pack"><option value="禮盒">禮盒</option><option value="散裝">散裝</option></select></div>' +
+      '<div><label>幾入</label><select class="units"></select>' +
+        '<input type="number" class="units-custom" min="1" placeholder="入數" style="display:none;margin-top:4px"></div>' +
+      '<div><label>幾盒</label><input type="number" class="boxes" min="1" value="1"></div>' +
+      '<div><label>每盒價格</label><input type="number" class="boxprice" min="0" placeholder="0"></div>' +
+    '</div>' +
+    '<div class="fill-head">內容物 — 每一盒裝什麼 <span class="fill-count"></span></div>' +
+    '<div class="fill-list"></div>' +
+    '<button class="btn btn-outline btn-sm add-fill">+ 加口味</button>' +
+    '<div class="item-sub"><span class="pieces">共 0 顆</span><span>小計 <b class="sub">$0</b></span></div>';
+  container.appendChild(div);
+
+  const packSel = div.querySelector('.pack');
+  const unitsSel = div.querySelector('.units');
+  const unitsCustom = div.querySelector('.units-custom');
+  const boxesInput = div.querySelector('.boxes');
+  const priceInput = div.querySelector('.boxprice');
+
+  function fillUnitOptions(keep) {
+    const list = packSel.value === '散裝' ? LOOSE_UNITS : GIFT_UNITS;
+    unitsSel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('') +
+      '<option value="__custom">自訂</option>';
+    if (keep != null && list.includes(Number(keep))) unitsSel.value = String(keep);
+  }
+  fillUnitOptions();
+
+  div.querySelector('.del-item').addEventListener('click', function () {
+    div.remove(); renumberItems(); recalcTotals();
+  });
+  div.querySelector('.add-fill').addEventListener('click', function () {
+    addFillRow(div); autoBoxPrice(div); recalcTotals();
+  });
+  packSel.addEventListener('change', function () {
+    fillUnitOptions(this.value === '散裝' ? 6 : 10);
+    unitsCustom.style.display = 'none';
+    autoBoxPrice(div); recalcTotals();
+  });
+  unitsSel.addEventListener('change', function () {
+    unitsCustom.style.display = this.value === '__custom' ? 'block' : 'none';
+    if (this.value === '__custom') unitsCustom.focus();
+    autoBoxPrice(div); recalcTotals();
+  });
+  unitsCustom.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
+  boxesInput.addEventListener('input', recalcTotals);
+  // 使用者一旦自己動過價格，就不再自動覆蓋
+  priceInput.addEventListener('input', function () { delete priceInput.dataset.auto; recalcTotals(); });
+
+  // 帶入既有資料
+  packSel.value = (item.pack === '散裝') ? '散裝' : '禮盒';
+  const units = Number(item.unitsPerBox) || Number(item.qty) || (packSel.value === '散裝' ? 6 : 10);
+  fillUnitOptions(units);
+  if (unitsSel.value !== String(units)) {
+    unitsSel.value = '__custom';
+    unitsCustom.style.display = 'block';
+    unitsCustom.value = units;
+  }
+  boxesInput.value = Number(item.boxes) || 1;
+
+  const fills = itemFillings(item);
+  if (fills.length) fills.forEach(f => addFillRow(div, f));
+  else addFillRow(div);
+
+  if (item.boxPrice != null && Number(item.boxPrice) > 0) priceInput.value = item.boxPrice;
+  else autoBoxPrice(div);
+
+  renumberItems();
+  recalcTotals();
+}
+
+function renumberItems() {
+  document.querySelectorAll('#orderItems .item-card').forEach((div, i) => {
+    div.querySelector('.item-no').textContent = '第 ' + (i + 1) + ' 種盒子';
+  });
+}
+
+function addFillRow(div, f) {
+  f = f || {};
+  const list = div.querySelector('.fill-list');
+  const opts = getProducts().map(p =>
+    '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('');
+  const row = document.createElement('div');
+  row.className = 'fill-row';
+  row.innerHTML =
+    '<select class="f-name"><option value="">-- 選口味 --</option>' + opts +
+      '<option value="__custom">自訂口味...</option></select>' +
+    '<input type="number" class="f-per" min="1" placeholder="顆">' +
+    '<span class="f-unit">顆 / 盒</span>' +
+    '<button class="btn btn-danger btn-sm rm-fill">✕</button>' +
+    '<input type="text" class="f-custom" placeholder="自訂口味名稱" style="display:none">';
+  list.appendChild(row);
+
+  const sel = row.querySelector('.f-name');
+  const custom = row.querySelector('.f-custom');
+  const per = row.querySelector('.f-per');
+
+  sel.addEventListener('change', function () {
+    if (this.value === '__custom') { custom.style.display = 'block'; custom.focus(); }
+    else { custom.style.display = 'none'; custom.value = ''; }
+    autoBoxPrice(div); recalcTotals();
+  });
+  custom.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
+  per.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
+  row.querySelector('.rm-fill').addEventListener('click', function () {
+    row.remove(); autoBoxPrice(div); recalcTotals();
   });
 
-  if (product) {
-    const found = Array.from(select.options).find(o => o.value === product);
-    if (found) { select.value = product; }
-    else { select.value = '__custom'; customInput.style.display = 'block'; customInput.value = product; }
+  if (f.name) {
+    const found = Array.from(sel.options).find(o => o.value === f.name);
+    if (found) sel.value = f.name;
+    else { sel.value = '__custom'; custom.style.display = 'block'; custom.value = f.name; }
   }
+  if (Number(f.per) > 0) per.value = f.per;
+  else {
+    // 新增的一列預設補到滿，單一口味時按一下就好
+    const remain = readItemCard(div).unitsPerBox - readItemCard(div).filled;
+    if (remain > 0) per.value = remain;
+  }
+  return row;
+}
+
+function readUnits(div) {
+  const unitsSel = div.querySelector('.units');
+  return unitsSel.value === '__custom'
+    ? (parseInt(div.querySelector('.units-custom').value) || 0)
+    : (parseInt(unitsSel.value) || 0);
+}
+
+function readItemCard(div) {
+  const pack = div.querySelector('.pack').value;
+  const unitsPerBox = readUnits(div);
+  const boxes = parseInt(div.querySelector('.boxes').value) || 0;
+  const boxPrice = Number(div.querySelector('.boxprice').value) || 0;
+
+  const fillings = [];
+  div.querySelectorAll('.fill-row').forEach(row => {
+    const sel = row.querySelector('.f-name');
+    const custom = row.querySelector('.f-custom').value.trim();
+    const name = sel.value === '__custom' ? custom : sel.value;
+    const p = parseInt(row.querySelector('.f-per').value) || 0;
+    if (name && p > 0) fillings.push({ name: name, per: p });
+  });
+  const filled = fillings.reduce((s, f) => s + f.per, 0);
+
+  return {
+    pack: pack, unitsPerBox: unitsPerBox, boxes: boxes, boxPrice: boxPrice,
+    fillings: fillings, filled: filled,
+    qty: unitsPerBox * boxes,
+    subtotal: boxPrice * boxes,
+    name: fillings.length === 1 ? fillings[0].name : (fillings.length ? '綜合' : '')
+  };
+}
+
+// 依價格規則自動算出每盒價格（使用者自己改過就不再覆蓋）
+function autoBoxPrice(div) {
+  const priceInput = div.querySelector('.boxprice');
+  if (priceInput.value && priceInput.dataset.auto !== '1') return;
+  const it = readItemCard(div);
+  if (!it.unitsPerBox || !it.fillings.length) return;
+  const p = calcBoxPrice(it.pack, it.unitsPerBox, it.fillings);
+  if (p > 0) { priceInput.value = p; priceInput.dataset.auto = '1'; }
+}
+
+function recalcTotals() {
+  let total = 0, pieces = 0;
+  document.querySelectorAll('#orderItems .item-card').forEach(div => {
+    const it = readItemCard(div);
+    const cnt = div.querySelector('.fill-count');
+    if (!it.unitsPerBox) {
+      cnt.className = 'fill-count'; cnt.textContent = '';
+    } else if (it.filled === 0) {
+      cnt.className = 'fill-count'; cnt.textContent = '（每盒要放滿 ' + it.unitsPerBox + ' 顆）';
+    } else if (it.filled === it.unitsPerBox) {
+      cnt.className = 'fill-count ok'; cnt.textContent = '✓ 已配滿 ' + it.unitsPerBox + ' 顆';
+    } else if (it.filled < it.unitsPerBox) {
+      cnt.className = 'fill-count warn';
+      cnt.textContent = '已配 ' + it.filled + '/' + it.unitsPerBox + ' 顆，還差 ' + (it.unitsPerBox - it.filled) + ' 顆';
+    } else {
+      cnt.className = 'fill-count warn';
+      cnt.textContent = '已配 ' + it.filled + '/' + it.unitsPerBox + ' 顆，多了 ' + (it.filled - it.unitsPerBox) + ' 顆';
+    }
+    div.querySelector('.pieces').textContent = '共 ' + it.qty + ' 顆';
+    div.querySelector('.sub').textContent = money(it.subtotal);
+    if (it.fillings.length && it.qty > 0) { total += it.subtotal; pieces += it.qty; }
+  });
+  document.getElementById('grandTotal').textContent = money(total);
+  document.getElementById('totalPieces').textContent = pieces ? '（共 ' + pieces + ' 顆）' : '';
+  const dep = Number(document.getElementById('depositInput').value) || 0;
+  document.getElementById('balanceOut').value = money(Math.max(0, total - dep));
 }
 
 function getFormItems() {
   const items = [];
-  document.querySelectorAll('#orderItems tr').forEach(tr => {
-    const select = tr.querySelector('select');
-    const customName = tr.querySelector('.custom-name').value.trim();
-    const name = select.value === '__custom' ? customName : select.value;
-    const qty = parseInt(tr.querySelector('.qty-input').value) || 0;
-    if (name && qty > 0) items.push({ name, qty });
+  document.querySelectorAll('#orderItems .item-card').forEach(div => {
+    const it = readItemCard(div);
+    if (it.fillings.length && it.boxes > 0 && it.unitsPerBox > 0) items.push(it);
   });
   return items;
 }
 
+// 有沒有哪一盒沒配滿
+function unbalancedItems() {
+  const bad = [];
+  document.querySelectorAll('#orderItems .item-card').forEach((div, i) => {
+    const it = readItemCard(div);
+    if (it.fillings.length && it.unitsPerBox && it.filled !== it.unitsPerBox) {
+      bad.push('第 ' + (i + 1) + ' 種盒子：' + it.unitsPerBox + ' 入，卻配了 ' + it.filled + ' 顆');
+    }
+  });
+  return bad;
+}
+
+// ===== 照片 =====
+let formPhotos = []; // { full: dataURL|httpURL, thumb: dataURL|httpURL }
+
+function compressImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const draw = (dim, q) => {
+          let w = img.width, h = img.height;
+          if (w > h && w > dim) { h = Math.round(h * dim / w); w = dim; }
+          else if (h >= w && h > dim) { w = Math.round(w * dim / h); h = dim; }
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          return c.toDataURL('image/jpeg', q);
+        };
+        let full = draw(maxDim, quality);
+        let q = quality;
+        while (full.length > 1400000 && q > 0.4) { q -= 0.12; full = draw(maxDim, q); }
+        resolve({ full: full, thumb: draw(420, 0.6) });
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoPick(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  for (const f of files) {
+    if (formPhotos.length >= 6) { alert('最多 6 張照片'); break; }
+    try { formPhotos.push(await compressImage(f, 1600, 0.85)); }
+    catch (e) { alert('照片讀取失敗：' + f.name); }
+  }
+  renderPhotoPreview();
+}
+
+function renderPhotoPreview() {
+  document.getElementById('photoPreview').innerHTML = formPhotos.map((p, i) =>
+    '<div class="photo-thumb"><img src="' + p.thumb + '" onclick="showImage(formPhotos[' + i + '].full)">' +
+    '<button class="rm" onclick="removePhoto(' + i + ')">✕</button></div>').join('');
+}
+function removePhoto(i) { formPhotos.splice(i, 1); renderPhotoPreview(); }
+function showImage(src) {
+  const lb = document.getElementById('lightbox');
+  lb.querySelector('img').src = src;
+  lb.classList.add('show');
+}
+
+async function uploadPhotos(orderId) {
+  const out = [];
+  let fallbackBytes = 0;
+  for (let i = 0; i < formPhotos.length; i++) {
+    const p = formPhotos[i];
+    if (typeof p.full === 'string' && p.full.startsWith('http')) { out.push(p); continue; }
+    let saved = null;
+    if (useCloud && storage) {
+      try {
+        const ref = storage.ref('orders/' + orderId + '/' + Date.now() + '_' + i + '.jpg');
+        await ref.putString(p.full, 'data_url');
+        const url = await ref.getDownloadURL();
+        saved = { full: url, thumb: url };
+      } catch (e) { saved = null; }
+    }
+    if (!saved) {
+      // 雲端儲存不可用 → 只保留縮圖（避免超過資料庫單筆上限）
+      if (fallbackBytes + p.thumb.length > 700000) continue;
+      fallbackBytes += p.thumb.length;
+      saved = { full: p.thumb, thumb: p.thumb };
+    }
+    out.push(saved);
+  }
+  return out;
+}
+
+// ===== 儲存訂單 =====
 async function saveOrder() {
   const name = document.getElementById('customerName').value.trim();
   const phone = document.getElementById('customerPhone').value.trim();
   const pickup = document.getElementById('pickupDate').value;
+  const pickupTime = document.getElementById('pickupTime').value;
   const note = document.getElementById('orderNote').value.trim();
+  const deposit = Number(document.getElementById('depositInput').value) || 0;
   const items = getFormItems();
   const editingId = document.getElementById('editingOrderId').value;
 
   if (!name) { alert('請輸入客戶姓名'); return; }
-  if (items.length === 0) { alert('請至少加入一項月餅'); return; }
+  if (items.length === 0) { alert('請至少加入一盒月餅（要選口味、填顆數與盒數）'); return; }
+
+  const bad = unbalancedItems();
+  if (bad.length && !confirm('有盒子沒配滿：\n\n' + bad.join('\n') + '\n\n確定要照這樣存嗎？')) return;
+
+  const total = items.reduce((s, i) => s + i.subtotal, 0);
 
   // 檢查是否有重複訂單（同姓名、同電話、同日期、同品項）
   const existing = ordersCache.find(o => {
@@ -541,65 +1169,91 @@ async function saveOrder() {
     if (o.customer !== name) return false;
     if (phone && o.phone && o.phone !== phone) return false;
     if (pickup && o.pickupDate && o.pickupDate !== pickup) return false;
-    const existItems = o.items.map(i => i.name).sort().join(',');
-    const newItems = items.map(i => i.name).sort().join(',');
-    return existItems === newItems;
+    const sig = list => (list || []).map(i => itemSpec(i) + ':' + itemContentsText(i)).sort().join('|');
+    return sig(o.items) === sig(items);
   });
   if (existing) {
     if (!confirm('已有相似訂單：\n' + existing.customer + (existing.phone ? ' ' + existing.phone : '') +
-      '\n品項：' + existing.items.map(i => i.name + ' x' + i.qty).join('、') +
-      (existing.pickupDate ? '\n取貨：' + formatDate(existing.pickupDate) : '') +
+      '\n品項：' + (existing.items || []).map(itemLabel).join('、') +
+      (existing.pickupDate ? '\n取貨：' + formatPickup(existing) : '') +
       '\n\n是否仍要儲存？')) return;
   }
 
-  if (editingId) {
-    const idx = ordersCache.findIndex(o => o.id === editingId);
-    if (idx !== -1) {
-      ordersCache[idx].customer = name;
-      ordersCache[idx].phone = phone;
-      ordersCache[idx].pickupDate = pickup;
-      ordersCache[idx].note = note;
-      ordersCache[idx].items = items;
-      saveOrdersLocal(ordersCache);
-      await cloudSaveOrder(ordersCache[idx]);
-    }
-  } else {
-    const order = {
-      id: 'ORD-' + Date.now().toString(36).toUpperCase(),
-      customer: name, phone: phone, pickupDate: pickup, note: note,
-      items: items, status: 'pending', createdAt: new Date().toISOString(),
-    };
-    ordersCache.unshift(order);
-    saveOrdersLocal(ordersCache);
-    await cloudSaveOrder(order);
-  }
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  const orderId = editingId || ('ORD-' + Date.now().toString(36).toUpperCase());
 
-  resetForm(); renderOrders(); updatePickupFilter(); updateHeaderStats();
-  alert(editingId ? '訂單已更新!' : '訂單已儲存!');
+  try {
+    if (formPhotos.length) saveBtn.textContent = '上傳照片中…';
+    const photos = await uploadPhotos(orderId);
+    saveBtn.textContent = '儲存中…';
+
+    if (editingId) {
+      const idx = ordersCache.findIndex(o => o.id === editingId);
+      if (idx !== -1) {
+        Object.assign(ordersCache[idx], {
+          customer: name, phone: phone, pickupDate: pickup, pickupTime: pickupTime,
+          note: note, items: items, total: total, deposit: deposit, photos: photos
+        });
+        saveOrdersLocal(ordersCache);
+        await cloudSaveOrder(ordersCache[idx]);
+      }
+    } else {
+      // 好認的單號：取貨日 + 當天第幾筆，例如 0915-03
+      const sameDay = ordersCache.filter(o => (o.pickupDate || '') === (pickup || ''));
+      const orderNo = (pickup ? pickup.slice(5, 7) + pickup.slice(8, 10) : '未定') +
+        '-' + String(sameDay.length + 1).padStart(2, '0');
+      const order = {
+        id: orderId, orderNo: orderNo,
+        customer: name, phone: phone, pickupDate: pickup, pickupTime: pickupTime, note: note,
+        items: items, total: total, deposit: deposit, photos: photos,
+        status: 'pending', createdAt: new Date().toISOString(),
+      };
+      ordersCache.unshift(order);
+      saveOrdersLocal(ordersCache);
+      await cloudSaveOrder(order);
+    }
+
+    resetForm(); renderOrders(); updatePickupFilter(); updateHeaderStats();
+    alert(editingId ? '訂單已更新!' : '訂單已儲存!');
+  } catch (e) {
+    alert('儲存失敗：' + (e.message || e));
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '儲存訂單';
+  }
 }
 
 function resetForm() {
-  document.getElementById('customerName').value = '';
-  document.getElementById('customerPhone').value = '';
-  document.getElementById('pickupDate').value = '';
-  document.getElementById('orderNote').value = '';
+  ['customerName', 'customerPhone', 'pickupTime', 'orderNote', 'depositInput', 'editingOrderId']
+    .forEach(id => document.getElementById(id).value = '');
+  setPickupDate('');
   document.getElementById('orderItems').innerHTML = '';
-  document.getElementById('editingOrderId').value = '';
   document.getElementById('formTitle').textContent = '新增訂單';
+  formPhotos = [];
+  renderPhotoPreview();
   addItemRow();
+  recalcTotals();
 }
 
 function editOrder(id) {
   const order = ordersCache.find(o => o.id === id);
   if (!order) return;
+  gotoTab('new');
   document.getElementById('editingOrderId').value = id;
-  document.getElementById('formTitle').textContent = '編輯訂單 - ' + order.customer;
-  document.getElementById('customerName').value = order.customer;
+  document.getElementById('formTitle').textContent =
+    '編輯訂單 - ' + order.customer + (order.orderNo ? '（' + order.orderNo + '）' : '');
+  document.getElementById('customerName').value = order.customer || '';
   document.getElementById('customerPhone').value = order.phone || '';
-  document.getElementById('pickupDate').value = order.pickupDate || '';
+  setPickupDate(order.pickupDate || '');
+  document.getElementById('pickupTime').value = order.pickupTime || '';
   document.getElementById('orderNote').value = order.note || '';
+  document.getElementById('depositInput').value = order.deposit || '';
   document.getElementById('orderItems').innerHTML = '';
-  order.items.forEach(item => addItemRow(item.name, item.qty));
+  (order.items || []).forEach(item => addItemRow(item));
+  formPhotos = (order.photos || []).map(p => typeof p === 'string' ? { full: p, thumb: p } : p);
+  renderPhotoPreview();
+  recalcTotals();
   document.getElementById('orderFormCard').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -621,7 +1275,144 @@ async function toggleStatus(id) {
   }
 }
 
-// ===== Order List =====
+// ===== 顯示輔助 =====
+// 舊訂單只有 name，沒有 fillings — 自動轉成單一口味
+function itemFillings(i) {
+  if (!i) return [];
+  if (Array.isArray(i.fillings) && i.fillings.length) return i.fillings;
+  if (i.name) return [{ name: i.name, per: Number(i.unitsPerBox) || Number(i.qty) || 0 }];
+  return [];
+}
+function itemContentsText(i) {
+  return itemFillings(i).map(f => f.name + '×' + f.per).join('、');
+}
+function itemSpec(i) {
+  return (i.pack || '') + (i.unitsPerBox || '') + '入';
+}
+// 純文字版（確認對話框、CSV 用）
+function itemLabel(i) {
+  if (!i.boxes) return (i.name || '') + ' ×' + (i.qty || 0);
+  const f = itemFillings(i);
+  const spec = itemSpec(i) + ' ×' + i.boxes + '盒';
+  if (f.length === 1) return f[0].name + ' ' + spec;
+  return spec + '（' + itemContentsText(i) + '）';
+}
+
+// 畫面版：規格一行，口味排成一顆顆的標籤
+function itemBlockHtml(i) {
+  const f = itemFillings(i);
+  if (!i.boxes) {
+    return '<div class="box-item"><div class="box-spec">' + esc(i.name || '') +
+      ' <span class="spec-boxes">×' + (i.qty || 0) + ' 顆</span></div></div>';
+  }
+  const spec = '<span class="spec-sub">' + esc((i.pack || '') + ' ' + (i.unitsPerBox || '') + '入') + '</span>';
+  const boxes = '<span class="spec-boxes">×' + i.boxes + ' 盒</span>';
+  if (f.length === 1) {
+    return '<div class="box-item"><div class="box-spec">' +
+      esc(f[0].name) + ' ' + spec + ' ' + boxes + '</div></div>';
+  }
+  return '<div class="box-item">' +
+    '<div class="box-spec">綜合 ' + spec + ' ' + boxes + '</div>' +
+    '<div class="box-fills">' +
+      f.map(x => '<span class="fill-chip">' + esc(x.name) + '<b>' + x.per + '</b></span>').join('') +
+    '</div></div>';
+}
+function orderPieces(o) { return (o.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0); }
+function orderTotal(o) {
+  if (o.total != null) return Number(o.total) || 0;
+  return (o.items || []).reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + ['日','一','二','三','四','五','六'][d.getDay()] + ')';
+}
+function formatPickup(o) {
+  if (!o.pickupDate) return '';
+  return formatDate(o.pickupDate) + (o.pickupTime ? ' ' + o.pickupTime : '');
+}
+
+// 本地時區的今天／明天（不能用 toISOString，那是 UTC，
+// 台灣凌晨 0~8 點會算成前一天）
+function localISO(offsetDays) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (offsetDays) d.setDate(d.getDate() + offsetDays);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+// ===== 取貨日期：只打月/日，年份自動補 =====
+function isoOrEmpty(y, mo, d) {
+  if (!(y > 1900) || mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+// 只給月/日時，挑「今天或之後」最近的那一年
+function withNearYear(mo, d) {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const thisYear = now.getFullYear();
+  for (const y of [thisYear, thisYear + 1]) {
+    const iso = isoOrEmpty(y, mo, d);
+    if (iso && new Date(iso + 'T00:00:00') >= now) return iso;
+  }
+  return isoOrEmpty(thisYear + 1, mo, d) || isoOrEmpty(thisYear, mo, d);
+}
+
+// 接受 9/15、915、0915、9-15、9月15日、2026/9/15 …
+function parseLooseDate(str) {
+  if (!str) return '';
+  const s = String(str).trim()
+    .replace(/日/g, '')
+    .replace(/[年月．.\-–—\s]/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/\/$/, '');
+  let m;
+  m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (m) return isoOrEmpty(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m) return withNearYear(+m[1], +m[2]);
+  m = s.match(/^(\d{3,4})$/);
+  if (m) {
+    const t = m[1];
+    return t.length === 3
+      ? withNearYear(+t.slice(0, 1), +t.slice(1))
+      : (withNearYear(+t.slice(0, 2), +t.slice(2)) || withNearYear(+t.slice(0, 1), +t.slice(1)));
+  }
+  return '';
+}
+
+// showError=true 時（離開欄位）才顯示紅字，打字中途不吵
+function onPickupDateInput(showError) {
+  const raw = document.getElementById('pickupDateText').value.trim();
+  const hint = document.getElementById('pickupDateHint');
+  const iso = parseLooseDate(raw);
+  document.getElementById('pickupDate').value = iso;
+  if (iso) {
+    hint.className = 'date-hint';
+    hint.textContent = '→ ' + iso.slice(0, 4) + '年 ' + formatDate(iso);
+  } else if (raw && showError) {
+    hint.className = 'date-hint err';
+    hint.textContent = '看不懂，請打成 9/15 這樣';
+  } else {
+    hint.className = 'date-hint';
+    hint.textContent = '';
+  }
+}
+
+// 把 ISO 日期寫回欄位（編輯訂單、AI 填入時用）
+function setPickupDate(iso) {
+  const t = document.getElementById('pickupDateText');
+  if (!iso) { t.value = ''; onPickupDateInput(); return; }
+  const short = Number(iso.slice(5, 7)) + '/' + Number(iso.slice(8, 10));
+  // 若簡寫會被解析成別的年份（例如去年的舊訂單），就顯示完整年份
+  t.value = (parseLooseDate(short) === iso) ? short : (Number(iso.slice(0, 4)) + '/' + short);
+  onPickupDateInput();
+}
+
+// ===== 訂單列表 =====
 function renderOrders() {
   const orders = getOrders();
   const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
@@ -629,7 +1420,7 @@ function renderOrders() {
   const pickupFilter = document.getElementById('filterPickup')?.value || 'all';
 
   const filtered = orders.filter(o => {
-    if (search && !o.customer.toLowerCase().includes(search) && !(o.phone || '').includes(search)) return false;
+    if (search && !(o.customer || '').toLowerCase().includes(search) && !(o.phone || '').includes(search)) return false;
     if (statusFilter !== 'all' && o.status !== statusFilter) return false;
     if (pickupFilter !== 'all' && o.pickupDate !== pickupFilter) return false;
     return true;
@@ -642,21 +1433,44 @@ function renderOrders() {
   }
 
   container.innerHTML = filtered.map(o => {
-    const itemTags = o.items.map(i => '<span class="item-tag">' + i.name + ' x' + i.qty + '</span>').join('');
+    const itemTags = (o.items || []).map(itemBlockHtml).join('');
+    const total = orderTotal(o);
+    const dep = Number(o.deposit) || 0;
+    const bal = Math.max(0, total - dep);
+    const moneyHtml = total > 0
+      ? '<span class="money-tag' + (bal === 0 ? ' paid' : '') + '">' +
+          (dep > 0 ? '總 ' + money(total) + '｜訂 ' + money(dep) + '｜尾 ' + money(bal) : money(total)) +
+        '</span>'
+      : '';
+    const photos = (o.photos || []).map((p, i) =>
+      '<img src="' + esc(p.thumb || p.full || p) + '" onclick="showOrderPhoto(\'' + o.id + '\',' + i + ')">').join('');
+
+    const pickupHtml = o.pickupDate
+      ? '<div class="pickup-line' + (o.pickupTime ? '' : ' no-time') + '">' +
+          '<span class="pickup-label">取貨</span>' +
+          '<span class="pickup-date">' + esc(formatDate(o.pickupDate)) + '</span>' +
+          (o.pickupTime ? '<span class="pickup-time">' + esc(o.pickupTime) + '</span>'
+                        : '<span class="pickup-notime">未指定時間</span>') +
+        '</div>'
+      : '<div class="pickup-line no-time"><span class="pickup-notime">未指定取貨日期</span></div>';
+
     return '<div class="order-card ' + (o.status === 'packed' ? 'packed' : '') + '">' +
       '<div class="order-header"><div>' +
-        '<span class="order-id">' + o.id + '</span>' +
-        '<span class="order-customer">' + o.customer + '</span>' +
-        (o.phone ? ' <span class="order-meta">' + o.phone + '</span>' : '') +
+        (o.orderNo ? '<span class="order-id">' + esc(o.orderNo) + '</span>' : '') +
+        '<span class="order-customer">' + esc(o.customer) + '</span>' +
+        (o.phone ? ' <span class="order-meta">' + esc(o.phone) + '</span>' : '') +
       '</div><div style="display:flex;gap:6px;align-items:center">' +
+        moneyHtml +
         '<span class="status-badge ' + (o.status === 'packed' ? 'status-packed' : 'status-pending') + '">' +
           (o.status === 'packed' ? '已包裝' : '未包裝') + '</span>' +
       '</div></div>' +
+      pickupHtml +
       '<div class="order-items">' + itemTags + '</div>' +
+      (photos ? '<div class="order-photos">' + photos + '</div>' : '') +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
         '<div class="order-meta">' +
-          (o.pickupDate ? '取貨: ' + formatDate(o.pickupDate) : '') +
-          (o.note ? ' | 備註: ' + o.note : '') +
+          (orderPieces(o) ? '共 ' + orderPieces(o) + ' 顆' : '') +
+          (o.note ? ' | 備註: ' + esc(o.note) : '') +
         '</div>' +
         '<div class="no-print" style="display:flex;gap:4px">' +
           '<button class="btn btn-sm ' + (o.status === 'packed' ? 'btn-secondary' : 'btn-success') + '" onclick="toggleStatus(\'' + o.id + '\')">' +
@@ -668,10 +1482,11 @@ function renderOrders() {
   }).join('');
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + ['日','一','二','三','四','五','六'][d.getDay()] + ')';
+function showOrderPhoto(orderId, idx) {
+  const o = ordersCache.find(x => x.id === orderId);
+  if (!o || !o.photos || !o.photos[idx]) return;
+  const p = o.photos[idx];
+  showImage(p.full || p.thumb || p);
 }
 
 function updatePickupFilter() {
@@ -684,66 +1499,138 @@ function updatePickupFilter() {
   if (dates.includes(current)) select.value = current;
 }
 
-// ===== Stats =====
+// ===== 統計 =====
+// 統計範圍下拉：今天以後 / 全部 / 個別日期
+function updateStatsFilter() {
+  const sel = document.getElementById('statsRange');
+  const cur = sel.value || 'tomorrow';   // 預設看明天：前一晚備料用
+  const all = getOrders();
+  const dates = [...new Set(all.map(o => o.pickupDate).filter(Boolean))].sort();
+  const cnt = iso => all.filter(o => o.pickupDate === iso).length;
+  const tm = localISO(1), td = localISO(0);
+  sel.innerHTML =
+    '<option value="tomorrow">🔥 明天 ' + formatDate(tm) + '（' + cnt(tm) + ' 筆）</option>' +
+    '<option value="today">今天 ' + formatDate(td) + '（' + cnt(td) + ' 筆）</option>' +
+    '<option value="upcoming">今天以後全部</option>' +
+    '<option value="all">全部訂單（含已過期）</option>' +
+    dates.map(d => '<option value="' + d + '">只看 ' + formatDate(d) + '（' + cnt(d) + ' 筆）</option>').join('') +
+    (all.some(o => !o.pickupDate) ? '<option value="none">只看未指定日期</option>' : '');
+  sel.value = Array.from(sel.options).some(o => o.value === cur) ? cur : 'tomorrow';
+}
+
+function statsFilteredOrders() {
+  const v = document.getElementById('statsRange').value || 'tomorrow';
+  const all = getOrders();
+  if (v === 'all') return all;
+  if (v === 'none') return all.filter(o => !o.pickupDate);
+  if (v === 'upcoming') return all.filter(o => !o.pickupDate || o.pickupDate >= localISO(0));
+  if (v === 'tomorrow') return all.filter(o => o.pickupDate === localISO(1));
+  if (v === 'today') return all.filter(o => o.pickupDate === localISO(0));
+  return all.filter(o => o.pickupDate === v);
+}
+
+function statsRangeLabel() {
+  const v = document.getElementById('statsRange').value || 'tomorrow';
+  if (v === 'all') return '範圍：全部訂單（含已過期的）';
+  if (v === 'none') return '範圍：未指定取貨日期的訂單';
+  if (v === 'upcoming') return '範圍：今天以後（含今天）還沒交的貨';
+  if (v === 'tomorrow') return '📅 明天 ' + formatDate(localISO(1)) + ' 要交的貨';
+  if (v === 'today') return '📅 今天 ' + formatDate(localISO(0)) + ' 要交的貨';
+  return '範圍：只看 ' + formatDate(v) + ' 這一天';
+}
+
 function renderStats() {
-  const orders = getOrders();
-  const productMap = {};
-  let totalQty = 0;
+  updateStatsFilter();
+  const orders = statsFilteredOrders();
+  document.getElementById('statsRangeTitle').textContent = statsRangeLabel();
+
+  const flavorMap = {};   // 口味 → 總顆數
+  const specMap = {};     // 規格 → 總盒數
+  let totalPieces = 0, totalMoney = 0, totalDeposit = 0, totalBoxes = 0;
 
   orders.forEach(o => {
-    o.items.forEach(i => {
-      if (!productMap[i.name]) productMap[i.name] = 0;
-      productMap[i.name] += i.qty;
-      totalQty += i.qty;
+    totalMoney += orderTotal(o);
+    totalDeposit += Number(o.deposit) || 0;
+    (o.items || []).forEach(i => {
+      const boxes = Number(i.boxes) || 1;
+      itemFillings(i).forEach(f => {
+        const pcs = (Number(f.per) || 0) * boxes;
+        flavorMap[f.name] = (flavorMap[f.name] || 0) + pcs;
+        totalPieces += pcs;
+      });
+      if (i.boxes) {
+        specMap[itemSpec(i)] = (specMap[itemSpec(i)] || 0) + boxes;
+        totalBoxes += boxes;
+      }
     });
   });
 
   document.getElementById('statsGrid').innerHTML =
     '<div class="stat-card"><div class="number">' + orders.length + '</div><div class="label">總訂單數</div></div>' +
-    '<div class="stat-card"><div class="number">' + totalQty + '</div><div class="label">月餅總數量</div></div>' +
+    '<div class="stat-card"><div class="number">' + totalPieces + '</div><div class="label">月餅總顆數</div></div>' +
+    '<div class="stat-card"><div class="number" style="font-size:28px">' + money(totalMoney) + '</div><div class="label">訂單總金額</div></div>' +
+    '<div class="stat-card"><div class="number" style="font-size:28px;color:#c62828">' + money(totalMoney - totalDeposit) + '</div><div class="label">待收尾款</div></div>' +
+    '<div class="stat-card"><div class="number">' + totalBoxes + '</div><div class="label">總盒數</div></div>' +
     '<div class="stat-card"><div class="number">' + orders.filter(o => o.status === 'packed').length + '/' + orders.length + '</div><div class="label">已包裝/全部</div></div>';
 
-  const sorted = Object.entries(productMap).sort((a, b) => b[1] - a[1]);
+  const flavors = Object.entries(flavorMap).sort((a, b) => b[1] - a[1]);
   document.getElementById('summaryTable').innerHTML =
-    '<thead><tr><th>品項</th><th style="text-align:right">總數量</th></tr></thead><tbody>' +
-    sorted.map(([name, qty]) =>
-      '<tr><td>' + name + '</td><td style="text-align:right;font-size:20px;font-weight:bold;color:#6d3a1a">' + qty + '</td></tr>'
-    ).join('') +
-    '<tr class="total-row"><td>合計</td><td style="text-align:right;font-size:22px;color:#c62828">' + totalQty + '</td></tr></tbody>';
+    '<thead><tr><th>口味</th><th style="text-align:right">總顆數</th></tr></thead><tbody>' +
+    (flavors.length ? flavors.map(([name, pcs]) =>
+      '<tr><td><b>' + esc(name) + '</b></td>' +
+      '<td style="text-align:right;font-size:22px;font-weight:bold;color:#6d3a1a">' + pcs + '</td></tr>'
+    ).join('') : '<tr><td colspan="2" style="color:#9a9a9a">尚無資料</td></tr>') +
+    '<tr class="total-row"><td>合計</td>' +
+    '<td style="text-align:right;font-size:22px;color:#c62828">' + totalPieces + ' 顆</td></tr></tbody>';
 
-  // Date stats as cards
+  const specs = Object.entries(specMap).sort((a, b) => b[1] - a[1]);
+  document.getElementById('specTable').innerHTML =
+    '<thead><tr><th>規格</th><th style="text-align:right">盒數</th></tr></thead><tbody>' +
+    (specs.length ? specs.map(([spec, b]) =>
+      '<tr><td><b>' + esc(spec) + '</b></td>' +
+      '<td style="text-align:right;font-size:22px;font-weight:bold;color:#6d3a1a">' + b + '</td></tr>'
+    ).join('') : '<tr><td colspan="2" style="color:#9a9a9a">尚無資料</td></tr>') +
+    '<tr class="total-row"><td>合計</td>' +
+    '<td style="text-align:right;font-size:22px;color:#c62828">' + totalBoxes + ' 盒</td></tr></tbody>';
+
+  // 依日期
   const dateMap = {};
   orders.forEach(o => {
     const d = o.pickupDate || '未指定日期';
-    if (!dateMap[d]) dateMap[d] = { orders: 0, items: {}, packed: 0 };
+    if (!dateMap[d]) dateMap[d] = { orders: 0, items: {}, specs: {}, packed: 0, money: 0 };
     dateMap[d].orders++;
+    dateMap[d].money += orderTotal(o);
     if (o.status === 'packed') dateMap[d].packed++;
-    o.items.forEach(i => {
-      if (!dateMap[d].items[i.name]) dateMap[d].items[i.name] = 0;
-      dateMap[d].items[i.name] += i.qty;
+    (o.items || []).forEach(i => {
+      const boxes = Number(i.boxes) || 1;
+      itemFillings(i).forEach(f => {
+        dateMap[d].items[f.name] = (dateMap[d].items[f.name] || 0) + (Number(f.per) || 0) * boxes;
+      });
+      if (i.boxes) dateMap[d].specs[itemSpec(i)] = (dateMap[d].specs[itemSpec(i)] || 0) + boxes;
     });
   });
 
-  const today = new Date().toISOString().slice(0, 10);
-  const dateEntries = Object.entries(dateMap)
-    .filter(([date]) => date === '未指定日期' || date >= today)
-    .sort((a, b) => a[0].localeCompare(b[0]));
+  const dateEntries = Object.entries(dateMap).sort((a, b) => a[0].localeCompare(b[0]));
+
   document.getElementById('dateStatsCards').innerHTML = dateEntries.length === 0
-    ? '<div class="empty-msg">沒有未來的取貨日期</div>'
+    ? '<div class="empty-msg">這個範圍內沒有訂單</div>'
     : dateEntries.map(([date, data]) => {
-    const itemList = Object.entries(data.items).map(([n, q]) =>
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #f0e8dd">' +
-        '<span style="font-size:16px">' + n + '</span>' +
-        '<span style="font-weight:bold;color:#fff;background:#D2691E;font-size:22px;padding:4px 16px;border-radius:8px;min-width:60px;text-align:center">' + q + '</span></div>'
-    ).join('');
-    return '<div class="card" style="border-left:4px solid #D2691E">' +
-      '<h2 style="border:none;padding:0;margin-bottom:10px">' + (date === '未指定日期' ? date : formatDate(date)) +
-      '<span style="font-size:13px;color:#999;font-weight:normal;margin-left:auto">' + data.orders + ' 筆訂單 | ' + data.packed + ' 已包裝</span></h2>' +
-      itemList + '</div>';
-  }).join('');
+      const itemList = Object.entries(data.items).sort((a, b) => b[1] - a[1]).map(([n, pcs]) =>
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #f0e8dd;gap:10px">' +
+          '<span style="font-size:16px">' + esc(n) + '</span>' +
+          '<span style="font-weight:bold;color:#fff;background:#D2691E;font-size:22px;padding:4px 16px;border-radius:8px;min-width:60px;text-align:center">' + pcs + '</span></div>'
+      ).join('');
+      const specText = Object.entries(data.specs).map(([s, b]) => s + ' ×' + b + '盒').join('、');
+      return '<div class="card" style="border-left:4px solid #D2691E">' +
+        '<h2 style="border:none;padding:0;margin-bottom:10px">' + (date === '未指定日期' ? date : formatDate(date)) +
+        '<span style="font-size:13px;color:#6e6e6e;font-weight:normal;margin-left:auto">' +
+          data.orders + ' 筆 | ' + data.packed + ' 已包裝 | ' + money(data.money) + '</span></h2>' +
+        (specText ? '<div style="font-size:13px;color:#8B4513;background:#fdf8f2;padding:8px 12px;border-radius:8px;margin-bottom:8px">盒子：' + esc(specText) + '</div>' : '') +
+        itemList + '</div>';
+    }).join('');
 }
 
-// ===== Packing =====
+// ===== 包裝清單 =====
 function renderPacking() {
   const orders = getOrders();
   const pending = orders.filter(o => o.status !== 'packed');
@@ -760,12 +1647,10 @@ function renderPacking() {
   fill.style.width = pct + '%';
   fill.className = 'progress-fill ' + (pct < 40 ? 'low' : pct < 75 ? 'mid' : 'high');
 
-  // Update badge
   const badge = document.getElementById('packingBadge');
   if (pending.length > 0) { badge.style.display = ''; badge.textContent = pending.length; }
   else { badge.style.display = 'none'; }
 
-  // Group by date
   const dateGroups = {};
   orders.forEach(o => {
     const d = o.pickupDate || '9999-未指定日期';
@@ -773,10 +1658,8 @@ function renderPacking() {
     dateGroups[d].push(o);
   });
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const sortedDates = Object.keys(dateGroups).sort().filter(d =>
-    d.startsWith('9999') || d >= todayStr
-  );
+  const todayStr = localISO(0);
+  const sortedDates = Object.keys(dateGroups).sort().filter(d => d.startsWith('9999') || d >= todayStr);
   if (sortedDates.length === 0) {
     document.getElementById('packingList').innerHTML = '<div class="empty-msg">目前沒有訂單</div>';
     return;
@@ -785,37 +1668,44 @@ function renderPacking() {
   let html = '';
   sortedDates.forEach(dateKey => {
     const groupOrders = dateGroups[dateKey];
-    const datePending = groupOrders.filter(o => o.status !== 'packed');
-    const datePacked = groupOrders.filter(o => o.status === 'packed');
+    const byTime = (a, b) => (a.pickupTime || '99:99').localeCompare(b.pickupTime || '99:99');
+    const datePending = groupOrders.filter(o => o.status !== 'packed').sort(byTime);
+    const datePacked = groupOrders.filter(o => o.status === 'packed').sort(byTime);
     const sorted = [...datePending, ...datePacked];
 
     const displayDate = dateKey.startsWith('9999') ? '未指定日期' : formatDate(dateKey);
 
-    // Aggregate items for this date
     const dateItems = {};
-    groupOrders.forEach(o => o.items.forEach(i => {
-      if (!dateItems[i.name]) dateItems[i.name] = 0;
-      dateItems[i.name] += i.qty;
+    groupOrders.forEach(o => (o.items || []).forEach(i => {
+      const b = Number(i.boxes) || 1;
+      itemFillings(i).forEach(f => {
+        dateItems[f.name] = (dateItems[f.name] || 0) + (Number(f.per) || 0) * b;
+      });
     }));
-    const summaryText = Object.entries(dateItems).map(([n, q]) => n + ' x' + q).join('、');
+    const summaryText = Object.entries(dateItems).map(([n, q]) => n + ' ×' + q).join('、');
 
     html += '<div class="date-group">' +
       '<div class="date-group-header"><span>' + displayDate + ' (' + datePacked.length + '/' + groupOrders.length + ' 已完成)</span>' +
-        '<span class="date-summary">' + summaryText + '</span></div>' +
+        '<span class="date-summary">' + esc(summaryText) + '</span></div>' +
       '<div class="date-group-body">';
 
     sorted.forEach(o => {
-      const itemTags = o.items.map(i => '<span class="item-tag-sm">' + i.name + ' x' + i.qty + '</span>').join(' ');
+      const itemBlocks = (o.items || []).map(itemBlockHtml).join('');
+      const bal = Math.max(0, orderTotal(o) - (Number(o.deposit) || 0));
+      const extras = [];
+      if (bal > 0) extras.push('<span style="color:#c62828;font-weight:bold">尾款 ' + money(bal) + '</span>');
+      if (o.note) extras.push('<span style="color:#e65100">備註：' + esc(o.note) + '</span>');
       html += '<div class="pack-item ' + (o.status === 'packed' ? 'done' : '') + '">' +
         '<input type="checkbox" ' + (o.status === 'packed' ? 'checked' : '') +
           ' onchange="toggleStatus(\'' + o.id + '\');renderPacking()">' +
+        (o.pickupTime ? '<span class="pack-time">' + esc(o.pickupTime) + '</span>' : '') +
         '<div class="pack-info">' +
-          '<div class="name">' + o.customer + (o.phone ? ' <span style="font-weight:normal;color:#aaa;font-size:13px">' + o.phone + '</span>' : '') + '</div>' +
-          '<div class="detail">' + itemTags +
-            (o.note ? ' <span style="color:#e65100">| ' + o.note + '</span>' : '') +
-          '</div>' +
+          '<div class="name">' + esc(o.customer) +
+            (o.phone ? ' <span style="font-weight:normal;color:#6e6e6e;font-size:13px">' + esc(o.phone) + '</span>' : '') + '</div>' +
+          '<div class="pack-boxes">' + itemBlocks + '</div>' +
+          (extras.length ? '<div class="detail">' + extras.join('　') + '</div>' : '') +
         '</div>' +
-        '<span class="pack-order-num">' + o.id + '</span>' +
+        (o.orderNo ? '<span class="pack-order-num">' + esc(o.orderNo) + '</span>' : '') +
       '</div>';
     });
 
@@ -825,59 +1715,103 @@ function renderPacking() {
   document.getElementById('packingList').innerHTML = html;
 }
 
-// ===== Product Settings =====
+// ===== 產品設定 =====
 function renderProductSettings() {
-  const products = getProducts();
-  document.getElementById('productList').innerHTML = products.map(p =>
-    '<div class="product-row">' +
-      '<input type="text" value="' + p.name + '" placeholder="品名" style="flex:1">' +
-      '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">X</button></div>'
-  ).join('');
+  const pr = getPricing();
+  document.getElementById('unitPriceInput').value = pr.unitPrice;
+  document.getElementById('giftSixInput').value = pr.giftSix;
+  document.getElementById('giftOtherInput').value = pr.giftOther;
+  document.getElementById('looseInput').value = pr.loose;
+  renderPricePreview();
+  document.getElementById('productList').innerHTML = getProducts().map(p => productRowHtml(p)).join('');
+}
+
+// 讀畫面上（還沒存）的數字，讓試算能即時反應
+function readPricingInputs() {
+  const g = id => Number(document.getElementById(id).value) || 0;
+  return { unitPrice: g('unitPriceInput'), giftSix: g('giftSixInput'), giftOther: g('giftOtherInput'), loose: g('looseInput') };
+}
+
+function renderPricePreview() {
+  const pr = readPricingInputs();
+  const rows = GIFT_UNITS.map(u => ({ pack: '禮盒', u: u, fee: u === 6 ? pr.giftSix : pr.giftOther }))
+    .concat(LOOSE_UNITS.map(u => ({ pack: '散裝', u: u, fee: pr.loose })));
+  document.getElementById('pricePreview').innerHTML =
+    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">一盒</th></tr></thead><tbody>' +
+    rows.map(r =>
+      '<tr><td><b>' + r.pack + r.u + '入</b></td>' +
+      '<td style="color:#5c5c5c;font-size:13px">' + r.u + ' 顆 × ' + pr.unitPrice +
+        (r.fee ? ' ＋ 盒子 ' + r.fee : '') + '</td>' +
+      '<td style="text-align:right;font-size:20px;font-weight:bold;color:#c62828">' +
+        money(pr.unitPrice * r.u + r.fee) + '</td></tr>'
+    ).join('') + '</tbody>';
+}
+
+function productRowHtml(p) {
+  p = p || { name: '', price: 0 };
+  return '<tr>' +
+    '<td><input type="text" class="p-name" value="' + esc(p.name) + '" placeholder="口味名稱"></td>' +
+    '<td style="text-align:center"><input type="number" min="0" class="p-price" ' +
+      'value="' + (p.price > 0 ? p.price : '') + '" placeholder="預設"></td>' +
+    '<td><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">X</button></td></tr>';
 }
 
 function addProductRow() {
-  const container = document.getElementById('productList');
-  const div = document.createElement('div');
-  div.className = 'product-row';
-  div.innerHTML = '<input type="text" value="" placeholder="品名" style="flex:1">' +
-    '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">X</button>';
-  container.appendChild(div);
+  document.getElementById('productList').insertAdjacentHTML('beforeend', productRowHtml());
 }
 
 async function saveProducts() {
-  const rows = document.querySelectorAll('#productList .product-row');
+  const pricing = readPricingInputs();
   const products = [];
-  rows.forEach(row => {
-    const name = row.querySelector('input').value.trim();
-    if (name) products.push({ name });
+  document.querySelectorAll('#productList tr').forEach(tr => {
+    const name = tr.querySelector('.p-name').value.trim();
+    if (!name) return;
+    products.push({ name: name, price: Number(tr.querySelector('.p-price').value) || 0 });
   });
-  localStorage.setItem('yoshino_products', JSON.stringify(products));
-  if (useCloud) await db.collection('settings').doc('products').set({ list: products });
-  alert('產品設定已儲存!');
+  safeSetItem('yoshino_products', JSON.stringify(products));
+  safeSetItem('yoshino_pricing', JSON.stringify(pricing));
+  if (useCloud) await db.collection('settings').doc('products').set({ list: products, pricing: pricing });
+  alert('設定已儲存！之後新增訂單就會用這組價格自動算。');
 }
 
-// ===== Export/Import =====
+// ===== 匯出 / 匯入 =====
 function exportCSV() {
   const orders = getOrders();
-  const productMap = {};
-  orders.forEach(o => o.items.forEach(i => {
-    if (!productMap[i.name]) productMap[i.name] = 0;
-    productMap[i.name] += i.qty;
+  const flavorMap = {}, specMap = {};
+  orders.forEach(o => (o.items || []).forEach(i => {
+    const b = Number(i.boxes) || 1;
+    itemFillings(i).forEach(f => {
+      flavorMap[f.name] = (flavorMap[f.name] || 0) + (Number(f.per) || 0) * b;
+    });
+    if (i.boxes) specMap[itemSpec(i)] = (specMap[itemSpec(i)] || 0) + b;
   }));
 
-  let csv = '\uFEFF品項,總數量\n';
-  Object.entries(productMap).sort((a, b) => b[1] - a[1]).forEach(([name, qty]) => { csv += name + ',' + qty + '\n'; });
-  csv += '\n\n訂單編號,客戶,電話,取貨日期,品項,數量,狀態,備註\n';
+  let csv = '﻿口味,總顆數\n';
+  Object.entries(flavorMap).sort((a, b) => b[1] - a[1]).forEach(([n, q]) => { csv += n + ',' + q + '\n'; });
+  csv += '\n規格,總盒數\n';
+  Object.entries(specMap).sort((a, b) => b[1] - a[1]).forEach(([s, b]) => { csv += s + ',' + b + '\n'; });
+
+  csv += '\n\n訂單編號,客戶,電話,取貨日期,取貨時間,包裝,幾入,幾盒,內容物(每盒),總顆數,每盒價格,小計,訂單總額,訂金,尾款,狀態,備註\n';
   orders.forEach(o => {
-    o.items.forEach(i => {
-      csv += [o.id, o.customer, o.phone||'', o.pickupDate||'', i.name, i.qty, o.status==='packed'?'已包裝':'未包裝', o.note||''].join(',') + '\n';
+    const total = orderTotal(o);
+    const dep = Number(o.deposit) || 0;
+    (o.items || []).forEach(i => {
+      csv += [
+        o.id, o.customer, o.phone || '', o.pickupDate || '', o.pickupTime || '',
+        i.pack || '', i.unitsPerBox || '', i.boxes || '',
+        itemContentsText(i).replace(/,/g, '，'),
+        i.qty || 0, i.boxPrice || 0, i.subtotal || 0,
+        total, dep, Math.max(0, total - dep),
+        o.status === 'packed' ? '已包裝' : '未包裝',
+        (o.note || '').replace(/,/g, '，')
+      ].join(',') + '\n';
     });
   });
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = '吉野村月餅訂單_' + new Date().toISOString().slice(0, 10) + '.csv';
+  link.download = '吉野村月餅訂單_' + localISO(0) + '.csv';
   link.click();
 }
 
@@ -886,7 +1820,7 @@ function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = '吉野村月餅系統備份_' + new Date().toISOString().slice(0, 10) + '.json';
+  link.download = '吉野村月餅系統備份_' + localISO(0) + '.json';
   link.click();
 }
 
@@ -894,16 +1828,18 @@ function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     try {
       const data = JSON.parse(e.target.result);
       if (data.orders) {
         if (!confirm('將匯入 ' + data.orders.length + ' 筆訂單，現有資料會被覆蓋，確定嗎?')) return;
         saveOrdersLocal(data.orders);
-        if (data.products) localStorage.setItem('yoshino_products', JSON.stringify(data.products));
+        if (data.products) safeSetItem('yoshino_products', JSON.stringify(data.products));
         if (useCloud) {
-          for (const order of data.orders) await db.collection('orders').doc(order.id).set(order);
-          if (data.products) await db.collection('settings').doc('products').set({ list: data.products });
+          const batch = db.batch();
+          data.orders.forEach(o => { if (o && o.id) batch.set(db.collection('orders').doc(o.id), o); });
+          if (data.products) batch.set(db.collection('settings').doc('products'), { list: data.products });
+          await batch.commit();
         }
         renderOrders(); updatePickupFilter(); updateHeaderStats();
         alert('資料匯入成功!');
@@ -933,7 +1869,6 @@ function updateHeaderStats() {
   const orders = getOrders();
   const pending = orders.filter(o => o.status !== 'packed').length;
   document.getElementById('headerStats').innerHTML = '訂單: ' + orders.length + ' 筆 | 待包裝: ' + pending + ' 筆';
-  // Update packing badge
   const badge = document.getElementById('packingBadge');
   if (pending > 0) { badge.style.display = ''; badge.textContent = pending; }
   else { badge.style.display = 'none'; }
@@ -946,9 +1881,11 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 addItemRow();
+recalcTotals();
 renderOrders();
 updatePickupFilter();
 updateHeaderStats();
+bootCloud();
 </script>
 </body>
 </html>
