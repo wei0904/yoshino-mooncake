@@ -1,5 +1,5 @@
 // 每次改版都要把版本號 +1，手機上的舊快取才會被清掉
-const CACHE_NAME = 'yoshino-mooncake-v12';
+const CACHE_NAME = 'yoshino-mooncake-v13';
 const urlsToCache = [
   './',
   './index.html',

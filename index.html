@@ -688,26 +688,25 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
     <div class="form-row">
       <div class="form-group">
         <label>每顆單價（預設）</label>
-        <input type="number" id="unitPriceInput" min="0" oninput="renderPricePreview()">
+        <input type="number" id="unitPriceInput" min="0" oninput="updateSpecPrices()">
       </div>
     </div>
 
-    <h3 style="font-size:14px;color:#8B4513;margin:18px 0 6px">包裝規格</h3>
+    <h3 style="font-size:14px;color:#8B4513;margin:18px 0 6px">包裝規格與售價</h3>
     <p class="hint">
-      一行一種規格，新增訂單的「包裝／幾入」下拉就是從這裡來的。<br>
-      <b>入數留空</b>代表散裝（沒有盒子，要幾顆填幾顆）。同一個包裝名稱可以有多種入數。
+      直接在這張表上改。一行一種規格，新增訂單的「包裝／幾入」下拉就是從這裡來的。<br>
+      <b>入數留空</b>代表散裝（沒有盒子，要幾顆填幾顆）。同一個包裝名稱可以有多種入數。<br>
+      右邊的<b>售價會跟著你改的數字即時重算</b>，不用先存檔。
     </p>
     <table class="summary-table">
       <thead><tr>
-        <th>包裝名稱</th><th style="width:90px">入數</th>
-        <th style="width:110px">盒子加價</th><th style="width:44px"></th>
+        <th>包裝名稱</th><th style="width:82px">入數</th>
+        <th style="width:96px">盒子加價</th>
+        <th style="text-align:right">賣多少</th><th style="width:44px"></th>
       </tr></thead>
       <tbody id="specList"></tbody>
     </table>
     <button class="btn btn-outline btn-sm" onclick="addSpecRow()">＋ 新增規格</button>
-
-    <h3 style="font-size:14px;color:#8B4513;margin:18px 0 8px">賣多少（試算）</h3>
-    <table class="summary-table" id="pricePreview"></table>
     <div class="btn-group">
       <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
     </div>
@@ -2242,7 +2241,7 @@ function renderProductSettings() {
   const pr = getPricing();
   document.getElementById('unitPriceInput').value = pr.unitPrice;
   document.getElementById('specList').innerHTML = getSpecs().map(specRowHtml).join('');
-  renderPricePreview();
+  updateSpecPrices();
   document.getElementById('productList').innerHTML = getProducts().map(p => productRowHtml(p)).join('');
 }
 
@@ -2256,21 +2255,22 @@ function readPricingInputs() {
 function specRowHtml(s) {
   s = s || { pack: '', units: '', fee: 0 };
   return '<tr>' +
-    '<td><input type="text" class="s-pack" value="' + esc(s.pack) + '" placeholder="例如：禮盒" oninput="renderPricePreview()"></td>' +
+    '<td><input type="text" class="s-pack" value="' + esc(s.pack) + '" placeholder="例如：禮盒" oninput="updateSpecPrices()"></td>' +
     '<td><input type="number" class="s-units" min="0" value="' + (Number(s.units) > 0 ? s.units : '') +
-      '" placeholder="散裝留空" oninput="renderPricePreview()"></td>' +
-    '<td><input type="number" class="s-fee" min="0" value="' + (Number(s.fee) || 0) + '" oninput="renderPricePreview()"></td>' +
+      '" placeholder="留空" oninput="updateSpecPrices()"></td>' +
+    '<td><input type="number" class="s-fee" min="0" value="' + (Number(s.fee) || 0) + '" oninput="updateSpecPrices()"></td>' +
+    '<td class="s-price" style="text-align:right"></td>' +
     '<td><button class="btn btn-danger btn-sm" onclick="removeSpecRow(this)">X</button></td></tr>';
 }
 
 function addSpecRow() {
   document.getElementById('specList').insertAdjacentHTML('beforeend', specRowHtml());
-  renderPricePreview();
+  updateSpecPrices();
 }
 
 function removeSpecRow(btn) {
   btn.closest('tr').remove();
-  renderPricePreview();
+  updateSpecPrices();
 }
 
 // 讀畫面上（還沒存）的規格表
@@ -2288,26 +2288,23 @@ function readSpecInputs() {
   return out;
 }
 
-function renderPricePreview() {
-  const pr = readPricingInputs();
-  const specs = readSpecInputs();
-  if (!specs.length) {
-    document.getElementById('pricePreview').innerHTML =
-      '<tbody><tr><td style="color:#8a7563">還沒有任何規格，按「＋ 新增規格」加一筆。</td></tr></tbody>';
-    return;
-  }
-  document.getElementById('pricePreview').innerHTML =
-    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">價格</th></tr></thead><tbody>' +
-    specs.map(s => {
-      const loose = !s.units;
-      const n = loose ? 1 : s.units;            // 散裝用「1 顆」示範單價
-      const label = loose ? (s.pack + ' 1 顆') : (s.pack + s.units + '入');
-      return '<tr><td><b>' + esc(label) + '</b></td>' +
-        '<td style="color:#5c5c5c;font-size:13px">' + n + ' 顆 × ' + pr.unitPrice +
-          (s.fee ? ' ＋ 盒子 ' + s.fee : '') + '</td>' +
-        '<td style="text-align:right;font-size:20px;font-weight:bold;color:#c62828">' +
-          money(pr.unitPrice * n + s.fee) + '</td></tr>';
-    }).join('') + '</tbody>';
+// 每改一個數字就把該列的售價重算，不用先存檔
+function updateSpecPrices() {
+  const unitPrice = readPricingInputs().unitPrice;
+  document.querySelectorAll('#specList tr').forEach(tr => {
+    const cell = tr.querySelector('.s-price');
+    if (!cell) return;
+    const pack = tr.querySelector('.s-pack').value.trim();
+    const units = Number(tr.querySelector('.s-units').value) || 0;
+    const fee = Number(tr.querySelector('.s-fee').value) || 0;
+    if (!pack) { cell.innerHTML = '<span style="color:#a89684;font-size:13px">填包裝名稱</span>'; return; }
+
+    const n = units || 1;   // 散裝用「1 顆」示範單價
+    const formula = n + ' 顆 × ' + unitPrice + (fee ? ' ＋ 盒子 ' + fee : '');
+    cell.innerHTML =
+      '<div style="font-size:20px;font-weight:bold;color:#c62828">' + money(unitPrice * n + fee) + '</div>' +
+      '<div style="font-size:12px;color:#8a7563">' + esc(formula) + (units ? ' / 盒' : ' / 顆') + '</div>';
+  });
 }
 
 function productRowHtml(p) {
@@ -2451,7 +2448,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v13';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
