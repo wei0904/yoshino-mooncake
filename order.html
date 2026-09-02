@@ -55,6 +55,26 @@ textarea { resize: vertical; min-height: 70px; }
   text-align: right; font-size: 14px; font-weight: 700;
   color: #8B4513; margin-top: 10px;
 }
+.fill-head {
+  font-size: 13px; font-weight: 600; color: #6d4c35;
+  margin: 12px 0 6px; display: flex; justify-content: space-between; align-items: baseline;
+}
+.fill-row { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
+.fill-row select { flex: 1; min-width: 0; padding: 9px 8px; font-size: 15px; }
+.fill-row input { width: 68px; flex: none; padding: 9px 6px; font-size: 15px; text-align: center; }
+.fill-row .u { font-size: 13px; color: #8a7563; flex: none; }
+.fill-row .rm {
+  flex: none; background: none; border: none; color: #c62828;
+  font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.btn-fill {
+  background: none; border: 1px dashed #c9b49a; border-radius: 6px;
+  color: #8B4513; font-size: 13px; padding: 7px 12px; cursor: pointer;
+  font-family: inherit; width: 100%;
+}
+.balance { font-size: 12px; font-weight: 600; margin-top: 6px; }
+.balance.ok { color: #2e7d32; }
+.balance.bad { color: #c62828; }
 .btn {
   padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px;
   font-weight: 600; cursor: pointer; font-family: inherit;
@@ -94,6 +114,7 @@ textarea { resize: vertical; min-height: 70px; }
 .err {
   background: #ffebee; color: #c62828; padding: 12px 14px;
   border-radius: 8px; font-size: 14px; margin-bottom: 14px;
+  white-space: pre-line;   /* 讓多行錯誤訊息換行 */
 }
 .loading { text-align: center; padding: 40px; color: #8a7563; }
 </style>
@@ -140,6 +161,10 @@ textarea { resize: vertical; min-height: 70px; }
 
     <div class="card">
       <h2>訂購內容</h2>
+      <p style="font-size:13px;color:#8a7563;margin-bottom:12px">
+        一盒可以混搭不同口味。例如 10 入禮盒要蛋黃酥 4 顆、綠豆椪 6 顆，
+        就按「再加一種口味」分開填，顆數加起來等於盒子入數就可以了。
+      </p>
       <div id="items"></div>
       <button class="btn btn-add" onclick="addItem()">＋ 再加一項</button>
     </div>
@@ -222,13 +247,17 @@ function boxFee(pack, units) {
     : (Number(pricing.giftOther) || 0);
 }
 
-// 一盒多少錢＝該口味單價 × 顆數 ＋ 盒子加價（跟店家系統同一套算法）
-function calcBoxPrice(pack, units, flavor) {
-  const prod = products.find(p => p.name === flavor);
-  const unitPrice = (prod && Number(prod.price) > 0)
-    ? Number(prod.price)
-    : (Number(pricing.unitPrice) || 0);
-  return unitPrice * (Number(units) || 0) + boxFee(pack, units);
+// 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
+// 跟店家系統同一套算法，混搭禮盒也照這個算
+function calcBoxPrice(pack, units, fillings) {
+  const def = Number(pricing.unitPrice) || 0;
+  let sum = 0;
+  (fillings || []).forEach(f => {
+    const prod = products.find(p => p.name === f.name);
+    const up = (prod && Number(prod.price) > 0) ? Number(prod.price) : def;
+    sum += up * (Number(f.per) || 0);
+  });
+  return sum + boxFee(pack, units);
 }
 
 let itemSeq = 0;
@@ -242,12 +271,6 @@ function addItem() {
       '<span class="item-no"></span>' +
       '<button class="btn-x" onclick="removeItem(this)" title="刪除">×</button>' +
     '</div>' +
-    '<div class="field">' +
-      '<label>口味</label>' +
-      '<select class="flavor" onchange="recalc()">' +
-        products.map(p => '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('') +
-      '</select>' +
-    '</div>' +
     '<div class="row">' +
       '<div class="field">' +
         '<label>包裝</label>' +
@@ -258,17 +281,62 @@ function addItem() {
       '</div>' +
       '<div class="field">' +
         '<label>幾入</label>' +
-        '<select class="units" onchange="recalc()"></select>' +
+        '<select class="units" onchange="onUnitsChange(this)"></select>' +
       '</div>' +
       '<div class="field">' +
         '<label>幾盒</label>' +
         '<input type="number" class="boxes" value="1" min="1" max="999" oninput="recalc()">' +
       '</div>' +
     '</div>' +
+    '<div class="fill-head">' +
+      '<span>一盒裡面要放什麼口味</span>' +
+      '<span class="balance"></span>' +
+    '</div>' +
+    '<div class="fill-list"></div>' +
+    '<button class="btn-fill" onclick="addFill(this.closest(\'.item-card\'))">＋ 這盒再加一種口味</button>' +
     '<div class="item-sub"></div>';
   document.getElementById('items').appendChild(div);
   fillUnits(div);
+  addFill(div);          // 預設先給一列，只要一種口味的人不用多按
+  syncSingleFilling(div);
   renumber();
+  recalc();
+}
+
+// 這盒新增一列口味
+function addFill(div) {
+  const list = div.querySelector('.fill-list');
+  const row = document.createElement('div');
+  row.className = 'fill-row';
+  row.innerHTML =
+    '<select class="f-name" onchange="recalc()">' +
+      products.map(p => '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('') +
+    '</select>' +
+    '<input type="number" class="f-per" min="0" max="999" placeholder="顆" oninput="recalc()">' +
+    '<span class="u">顆</span>' +
+    '<button class="rm" onclick="removeFill(this)" title="刪除">×</button>';
+  list.appendChild(row);
+  recalc();
+}
+
+function removeFill(btn) {
+  const div = btn.closest('.item-card');
+  const list = div.querySelector('.fill-list');
+  if (list.children.length <= 1) { alert('一盒至少要有一種口味'); return; }
+  btn.closest('.fill-row').remove();
+  recalc();
+}
+
+// 只有一種口味時，顆數自動等於盒子入數，客人不用自己算
+function syncSingleFilling(div) {
+  const rows = div.querySelectorAll('.fill-row');
+  if (rows.length !== 1) return;
+  const units = parseInt(div.querySelector('.units').value) || 0;
+  rows[0].querySelector('.f-per').value = units || '';
+}
+
+function onUnitsChange(sel) {
+  syncSingleFilling(sel.closest('.item-card'));
   recalc();
 }
 
@@ -289,7 +357,9 @@ function renumber() {
 }
 
 function onPackChange(sel) {
-  fillUnits(sel.closest('.item-card'));
+  const div = sel.closest('.item-card');
+  fillUnits(div);
+  syncSingleFilling(div);
   recalc();
 }
 
@@ -302,30 +372,50 @@ function fillUnits(div) {
   if (list.indexOf(Number(prev)) !== -1) sel.value = prev;
 }
 
+// 讀出一張品項卡，格式跟店家系統的品項完全一致，接受後可直接沿用
 function readItem(div) {
-  const flavor = div.querySelector('.flavor').value;
   const pack = div.querySelector('.pack').value;
   const unitsPerBox = parseInt(div.querySelector('.units').value) || 0;
   const boxes = parseInt(div.querySelector('.boxes').value) || 0;
-  const boxPrice = calcBoxPrice(pack, unitsPerBox, flavor);
+
+  const fillings = [];
+  div.querySelectorAll('.fill-row').forEach(row => {
+    const name = row.querySelector('.f-name').value;
+    const per = parseInt(row.querySelector('.f-per').value) || 0;
+    if (name && per > 0) fillings.push({ name: name, per: per });
+  });
+  const filled = fillings.reduce((s, f) => s + f.per, 0);
+  const boxPrice = calcBoxPrice(pack, unitsPerBox, fillings);
+
   return {
-    pack: pack,
-    unitsPerBox: unitsPerBox,
-    boxes: boxes,
-    boxPrice: boxPrice,
-    // 一盒裝滿同一種口味，格式跟店家系統的品項一致，接受後可直接沿用
-    fillings: [{ name: flavor, per: unitsPerBox }],
-    filled: unitsPerBox,
+    pack: pack, unitsPerBox: unitsPerBox, boxes: boxes, boxPrice: boxPrice,
+    fillings: fillings, filled: filled,
     qty: unitsPerBox * boxes,
     subtotal: boxPrice * boxes,
-    name: flavor
+    name: fillings.length === 1 ? fillings[0].name : (fillings.length ? '綜合' : '')
   };
 }
 
 function readAllItems() {
   return Array.from(document.querySelectorAll('#items .item-card'))
     .map(readItem)
-    .filter(i => i.boxes > 0 && i.unitsPerBox > 0);
+    .filter(i => i.boxes > 0 && i.unitsPerBox > 0 && i.fillings.length);
+}
+
+function itemContentsText(i) {
+  return (i.fillings || []).map(f => f.name + ' ' + f.per).join('、');
+}
+
+// 顆數沒湊滿的品項，回傳提示文字
+function unbalanced() {
+  const bad = [];
+  document.querySelectorAll('#items .item-card').forEach((div, idx) => {
+    const i = readItem(div);
+    if (i.fillings.length && i.unitsPerBox && i.filled !== i.unitsPerBox) {
+      bad.push('第 ' + (idx + 1) + ' 項：' + i.unitsPerBox + ' 入的盒子，口味卻只配了 ' + i.filled + ' 顆');
+    }
+  });
+  return bad;
 }
 
 function recalc() {
@@ -334,6 +424,19 @@ function recalc() {
     const i = readItem(div);
     total += i.subtotal;
     pieces += i.qty;
+
+    const bal = div.querySelector('.balance');
+    const diff = i.unitsPerBox - i.filled;
+    if (!i.unitsPerBox || !i.fillings.length) {
+      bal.textContent = ''; bal.className = 'balance';
+    } else if (diff === 0) {
+      bal.textContent = '✓ 剛好 ' + i.unitsPerBox + ' 顆'; bal.className = 'balance ok';
+    } else if (diff > 0) {
+      bal.textContent = '還差 ' + diff + ' 顆'; bal.className = 'balance bad';
+    } else {
+      bal.textContent = '多了 ' + (-diff) + ' 顆'; bal.className = 'balance bad';
+    }
+
     div.querySelector('.item-sub').textContent =
       '每盒 ' + money(i.boxPrice) + ' × ' + i.boxes + ' 盒 ＝ ' + money(i.subtotal);
   });
@@ -357,7 +460,9 @@ async function submitOrder() {
   if (!customer) { showError('請填寫姓名'); return; }
   if (!phone) { showError('請填寫聯絡電話'); return; }
   if (!pickupDate) { showError('請選擇取貨日期'); return; }
-  if (!items.length) { showError('請至少訂購一項，且盒數要大於 0'); return; }
+  if (!items.length) { showError('請至少訂購一項，並選好口味和盒數'); return; }
+  const bad = unbalanced();
+  if (bad.length) { showError('口味顆數要跟盒子的入數一樣：\n' + bad.join('\n')); return; }
   showError('');
 
   const total = items.reduce((s, i) => s + i.subtotal, 0);
@@ -386,9 +491,13 @@ async function submitOrder() {
 
 function showDone(d) {
   document.getElementById('form').style.display = 'none';
-  const lines = d.items.map(i =>
-    esc(i.name) + '　' + esc(i.pack) + i.unitsPerBox + '入 × ' + i.boxes + ' 盒　' + money(i.subtotal)
-  ).join('<br>');
+  const lines = d.items.map(i => {
+    const spec = esc(i.pack) + i.unitsPerBox + '入 × ' + i.boxes + ' 盒';
+    const detail = i.fillings && i.fillings.length > 1
+      ? '<br><span style="color:#8a7563;font-size:13px">　（' + esc(itemContentsText(i)) + '）</span>'
+      : '';
+    return esc(i.name) + '　' + spec + '　' + money(i.subtotal) + detail;
+  }).join('<br>');
   document.getElementById('done').style.display = '';
   document.getElementById('done').innerHTML =
     '<div class="card done">' +
