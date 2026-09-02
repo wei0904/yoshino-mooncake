@@ -648,7 +648,8 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div class="container">
   <div class="card">
     <h2>價格設定</h2>
-    <p class="hint">算法是 <b>每顆單價 × 顆數 ＋ 盒子加價</b>。混搭禮盒也照這個算，不用另外設價。</p>
+    <p class="hint">算法是 <b>每顆單價 × 顆數 ＋ 盒子加價</b>。混搭禮盒也照這個算，不用另外設價。<br>
+      塑膠盒固定 6 入，散裝沒有盒子、只算顆數。</p>
     <div class="form-row">
       <div class="form-group">
         <label>每顆單價</label>
@@ -663,8 +664,8 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
         <input type="number" id="giftOtherInput" min="0" oninput="renderPricePreview()">
       </div>
       <div class="form-group">
-        <label>散裝加價</label>
-        <input type="number" id="looseInput" min="0" oninput="renderPricePreview()">
+        <label>塑膠盒加價</label>
+        <input type="number" id="plasticInput" min="0" oninput="renderPricePreview()">
       </div>
     </div>
     <h3 style="font-size:14px;color:#8B4513;margin:18px 0 8px">一盒賣多少（試算）</h3>
@@ -1111,10 +1112,11 @@ async function rejectSubmission(id) {
 
 // ===== 常數 =====
 const GIFT_UNITS = [6, 9, 10, 12, 15];
-const LOOSE_UNITS = [6];
+const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
+const PACKS = ['禮盒', '塑膠盒', '散裝'];
 
 // 價格規則：每顆單價 × 顆數 ＋ 盒子加價
-const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, loose: 0 };
+const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, plastic: 0 };
 
 const DEFAULT_PRODUCTS = [
   { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
@@ -1127,7 +1129,13 @@ function getPricing() {
   catch (e) { p = null; }
   p = p || {};
   const pick = k => (p[k] != null && p[k] !== '') ? Number(p[k]) : DEFAULT_PRICING[k];
-  return { unitPrice: pick('unitPrice'), giftSix: pick('giftSix'), giftOther: pick('giftOther'), loose: pick('loose') };
+  // 舊資料把塑膠盒的加價存在 loose 欄位，沿用過來才不會設定跑掉
+  const plastic = (p.plastic != null && p.plastic !== '') ? Number(p.plastic)
+    : ((p.loose != null && p.loose !== '') ? Number(p.loose) : DEFAULT_PRICING.plastic);
+  return {
+    unitPrice: pick('unitPrice'), giftSix: pick('giftSix'),
+    giftOther: pick('giftOther'), plastic: plastic
+  };
 }
 
 function getProducts() {
@@ -1138,12 +1146,16 @@ function getProducts() {
   return list.map(p => ({ name: p.name, price: Number(p.price) || 0 }));
 }
 
-// 盒子加價：禮盒 6 入一種價，其他入數另一種價，散裝不加
+// 盒子加價：禮盒 6 入一種價、其他入數另一種價；塑膠盒自訂（預設 0）；散裝沒有盒子
 function boxFee(pack, units) {
   const pr = getPricing();
-  if (pack === '散裝') return pr.loose;
+  if (pack === '散裝') return 0;
+  if (pack === '塑膠盒') return pr.plastic;
   return Number(units) === 6 ? pr.giftSix : pr.giftOther;
 }
+
+// 散裝沒有「幾入」的概念，顆數由客人點的口味加總決定
+function isLoose(pack) { return pack === '散裝'; }
 
 // 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
 function calcBoxPrice(pack, units, fillings) {
@@ -1204,13 +1216,15 @@ function addItemRow(item) {
       '<button class="btn btn-danger btn-sm del-item">刪除這盒</button>' +
     '</div>' +
     '<div class="item-fields">' +
-      '<div><label>包裝</label><select class="pack"><option value="禮盒">禮盒</option><option value="散裝">散裝</option></select></div>' +
-      '<div><label>幾入</label><select class="units"></select>' +
+      '<div><label>包裝</label><select class="pack">' +
+        PACKS.map(p => '<option value="' + p + '">' + p + '</option>').join('') +
+      '</select></div>' +
+      '<div class="f-units"><label>幾入</label><select class="units"></select>' +
         '<input type="number" class="units-custom" min="1" placeholder="入數" style="display:none;margin-top:4px"></div>' +
-      '<div><label>幾盒</label><input type="number" class="boxes" min="1" value="1"></div>' +
-      '<div><label>每盒價格</label><input type="number" class="boxprice" min="0" placeholder="0"></div>' +
+      '<div class="f-boxes"><label>幾盒</label><input type="number" class="boxes" min="1" value="1"></div>' +
+      '<div><label class="price-label">每盒價格</label><input type="number" class="boxprice" min="0" placeholder="0"></div>' +
     '</div>' +
-    '<div class="fill-head">內容物 — 每一盒裝什麼 <span class="fill-count"></span></div>' +
+    '<div class="fill-head"><span class="fill-title">內容物 — 每一盒裝什麼</span> <span class="fill-count"></span></div>' +
     '<div class="fill-list"></div>' +
     '<button class="btn btn-outline btn-sm add-fill">+ 加口味</button>' +
     '<div class="item-sub"><span class="pieces">共 0 顆</span><span>小計 <b class="sub">$0</b></span></div>';
@@ -1223,10 +1237,22 @@ function addItemRow(item) {
   const priceInput = div.querySelector('.boxprice');
 
   function fillUnitOptions(keep) {
-    const list = packSel.value === '散裝' ? LOOSE_UNITS : GIFT_UNITS;
+    const pack = packSel.value;
+    const list = pack === '塑膠盒' ? PLASTIC_UNITS : GIFT_UNITS;
+    // 塑膠盒固定 6 入，不給自訂
     unitsSel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('') +
-      '<option value="__custom">自訂</option>';
+      (pack === '塑膠盒' ? '' : '<option value="__custom">自訂</option>');
     if (keep != null && list.includes(Number(keep))) unitsSel.value = String(keep);
+  }
+
+  // 散裝沒有盒子，隱藏「幾入 / 幾盒」，顆數直接由下面的口味加總
+  function applyPackLayout() {
+    const loose = isLoose(packSel.value);
+    div.querySelector('.f-units').style.display = loose ? 'none' : '';
+    div.querySelector('.f-boxes').style.display = loose ? 'none' : '';
+    div.querySelector('.price-label').textContent = loose ? '總價' : '每盒價格';
+    div.querySelector('.fill-title').textContent = loose ? '要哪些口味、各幾顆' : '內容物 — 每一盒裝什麼';
+    if (loose) boxesInput.value = 1;
   }
   fillUnitOptions();
 
@@ -1237,8 +1263,9 @@ function addItemRow(item) {
     addFillRow(div); autoBoxPrice(div); recalcTotals();
   });
   packSel.addEventListener('change', function () {
-    fillUnitOptions(this.value === '散裝' ? 6 : 10);
+    fillUnitOptions(this.value === '塑膠盒' ? 6 : 10);
     unitsCustom.style.display = 'none';
+    applyPackLayout();
     autoBoxPrice(div); recalcTotals();
   });
   unitsSel.addEventListener('change', function () {
@@ -1252,10 +1279,11 @@ function addItemRow(item) {
   priceInput.addEventListener('input', function () { delete priceInput.dataset.auto; recalcTotals(); });
 
   // 帶入既有資料
-  packSel.value = (item.pack === '散裝') ? '散裝' : '禮盒';
-  const units = Number(item.unitsPerBox) || Number(item.qty) || (packSel.value === '散裝' ? 6 : 10);
+  packSel.value = PACKS.includes(item.pack) ? item.pack : '禮盒';
+  applyPackLayout();
+  const units = Number(item.unitsPerBox) || Number(item.qty) || (packSel.value === '塑膠盒' ? 6 : 10);
   fillUnitOptions(units);
-  if (unitsSel.value !== String(units)) {
+  if (!isLoose(packSel.value) && unitsSel.value !== String(units)) {
     unitsSel.value = '__custom';
     unitsCustom.style.display = 'block';
     unitsCustom.value = units;
@@ -1333,8 +1361,6 @@ function readUnits(div) {
 
 function readItemCard(div) {
   const pack = div.querySelector('.pack').value;
-  const unitsPerBox = readUnits(div);
-  const boxes = parseInt(div.querySelector('.boxes').value) || 0;
   const boxPrice = Number(div.querySelector('.boxprice').value) || 0;
 
   const fillings = [];
@@ -1346,6 +1372,11 @@ function readItemCard(div) {
     if (name && p > 0) fillings.push({ name: name, per: p });
   });
   const filled = fillings.reduce((s, f) => s + f.per, 0);
+
+  // 散裝沒有盒子：顆數就是各口味加總，盒數固定 1
+  const loose = isLoose(pack);
+  const unitsPerBox = loose ? filled : readUnits(div);
+  const boxes = loose ? 1 : (parseInt(div.querySelector('.boxes').value) || 0);
 
   return {
     pack: pack, unitsPerBox: unitsPerBox, boxes: boxes, boxPrice: boxPrice,
@@ -1408,6 +1439,7 @@ function unbalancedItems() {
   const bad = [];
   document.querySelectorAll('#orderItems .item-card').forEach((div, i) => {
     const it = readItemCard(div);
+    if (isLoose(it.pack)) return;   // 散裝的顆數就是加總，不會對不起來
     if (it.fillings.length && it.unitsPerBox && it.filled !== it.unitsPerBox) {
       bad.push('第 ' + (i + 1) + ' 種盒子：' + it.unitsPerBox + ' 入，卻配了 ' + it.filled + ' 顆');
     }
@@ -1638,13 +1670,14 @@ function itemContentsText(i) {
   return itemFillings(i).map(f => f.name + '×' + f.per).join('、');
 }
 function itemSpec(i) {
+  if (isLoose(i.pack)) return '散裝 ' + (i.unitsPerBox || 0) + ' 顆';
   return (i.pack || '') + (i.unitsPerBox || '') + '入';
 }
 // 純文字版（確認對話框、CSV 用）
 function itemLabel(i) {
   if (!i.boxes) return (i.name || '') + ' ×' + (i.qty || 0);
   const f = itemFillings(i);
-  const spec = itemSpec(i) + ' ×' + i.boxes + '盒';
+  const spec = isLoose(i.pack) ? itemSpec(i) : (itemSpec(i) + ' ×' + i.boxes + '盒');
   if (f.length === 1) return f[0].name + ' ' + spec;
   return spec + '（' + itemContentsText(i) + '）';
 }
@@ -2072,7 +2105,7 @@ function renderProductSettings() {
   document.getElementById('unitPriceInput').value = pr.unitPrice;
   document.getElementById('giftSixInput').value = pr.giftSix;
   document.getElementById('giftOtherInput').value = pr.giftOther;
-  document.getElementById('looseInput').value = pr.loose;
+  document.getElementById('plasticInput').value = pr.plastic;
   renderPricePreview();
   document.getElementById('productList').innerHTML = getProducts().map(p => productRowHtml(p)).join('');
 }
@@ -2080,17 +2113,18 @@ function renderProductSettings() {
 // 讀畫面上（還沒存）的數字，讓試算能即時反應
 function readPricingInputs() {
   const g = id => Number(document.getElementById(id).value) || 0;
-  return { unitPrice: g('unitPriceInput'), giftSix: g('giftSixInput'), giftOther: g('giftOtherInput'), loose: g('looseInput') };
+  return { unitPrice: g('unitPriceInput'), giftSix: g('giftSixInput'), giftOther: g('giftOtherInput'), plastic: g('plasticInput') };
 }
 
 function renderPricePreview() {
   const pr = readPricingInputs();
-  const rows = GIFT_UNITS.map(u => ({ pack: '禮盒', u: u, fee: u === 6 ? pr.giftSix : pr.giftOther }))
-    .concat(LOOSE_UNITS.map(u => ({ pack: '散裝', u: u, fee: pr.loose })));
+  const rows = GIFT_UNITS.map(u => ({ label: '禮盒' + u + '入', u: u, fee: u === 6 ? pr.giftSix : pr.giftOther }))
+    .concat(PLASTIC_UNITS.map(u => ({ label: '塑膠盒' + u + '入', u: u, fee: pr.plastic })))
+    .concat([{ label: '散裝 1 顆', u: 1, fee: 0 }]);
   document.getElementById('pricePreview').innerHTML =
-    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">一盒</th></tr></thead><tbody>' +
+    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">價格</th></tr></thead><tbody>' +
     rows.map(r =>
-      '<tr><td><b>' + r.pack + r.u + '入</b></td>' +
+      '<tr><td><b>' + r.label + '</b></td>' +
       '<td style="color:#5c5c5c;font-size:13px">' + r.u + ' 顆 × ' + pr.unitPrice +
         (r.fee ? ' ＋ 盒子 ' + r.fee : '') + '</td>' +
       '<td style="text-align:right;font-size:20px;font-weight:bold;color:#c62828">' +

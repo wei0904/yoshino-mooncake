@@ -162,7 +162,8 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="card">
       <h2>訂購內容</h2>
       <p style="font-size:13px;color:#8a7563;margin-bottom:12px">
-        一盒可以混搭不同口味。例如 10 入禮盒要蛋黃酥 4 顆、綠豆椪 6 顆，
+        <b>禮盒</b>可選 6～15 入，<b>塑膠盒</b>固定 6 入，<b>散裝</b>沒有盒子、要幾顆就填幾顆。<br>
+        一盒可以混搭不同口味 —— 例如 10 入禮盒要蛋黃酥 4 顆、綠豆椪 6 顆，
         就按「再加一種口味」分開填，顆數加起來等於盒子入數就可以了。
       </p>
       <div id="items"></div>
@@ -201,13 +202,14 @@ const firebaseConfig = {
 };
 
 // 跟店家系統同一套預設值，讀不到雲端設定時才會用到
-const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, loose: 0 };
+const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, plastic: 0 };
 const DEFAULT_PRODUCTS = [
   { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
   { name: '芋頭酥' }, { name: '金月亮' },
 ];
 const GIFT_UNITS = [6, 9, 10, 12, 15];
-const LOOSE_UNITS = [6];
+const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
+const PACKS = ['禮盒', '塑膠盒', '散裝'];
 
 let db = null;
 let products = DEFAULT_PRODUCTS;
@@ -222,7 +224,11 @@ db.collection('settings').doc('products').get()
     if (doc.exists) {
       const d = doc.data();
       if (d.list && d.list.length) products = d.list;
-      if (d.pricing) pricing = Object.assign({}, DEFAULT_PRICING, d.pricing);
+      if (d.pricing) {
+        pricing = Object.assign({}, DEFAULT_PRICING, d.pricing);
+        // 舊設定把塑膠盒加價存在 loose 欄位
+        if (d.pricing.plastic == null && d.pricing.loose != null) pricing.plastic = Number(d.pricing.loose) || 0;
+      }
     }
   })
   .catch(() => {})
@@ -239,13 +245,17 @@ function esc(s) {
 }
 function money(n) { return '$' + (Number(n) || 0).toLocaleString(); }
 
-// 盒子加價：禮盒 6 入一種價，其他入數另一種價，散裝不加
+// 盒子加價：禮盒 6 入一種價、其他入數另一種價；塑膠盒自訂（預設 0）；散裝沒有盒子
 function boxFee(pack, units) {
-  if (pack === '散裝') return Number(pricing.loose) || 0;
+  if (pack === '散裝') return 0;
+  if (pack === '塑膠盒') return Number(pricing.plastic) || 0;
   return Number(units) === 6
     ? (Number(pricing.giftSix) || 0)
     : (Number(pricing.giftOther) || 0);
 }
+
+// 散裝沒有「幾入」，顆數就是各口味加總
+function isLoose(pack) { return pack === '散裝'; }
 
 // 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
 // 跟店家系統同一套算法，混搭禮盒也照這個算
@@ -275,21 +285,20 @@ function addItem() {
       '<div class="field">' +
         '<label>包裝</label>' +
         '<select class="pack" onchange="onPackChange(this)">' +
-          '<option value="禮盒">禮盒</option>' +
-          '<option value="散裝">散裝</option>' +
+          PACKS.map(p => '<option value="' + p + '">' + p + '</option>').join('') +
         '</select>' +
       '</div>' +
-      '<div class="field">' +
+      '<div class="field f-units">' +
         '<label>幾入</label>' +
         '<select class="units" onchange="onUnitsChange(this)"></select>' +
       '</div>' +
-      '<div class="field">' +
+      '<div class="field f-boxes">' +
         '<label>幾盒</label>' +
         '<input type="number" class="boxes" value="1" min="1" max="999" oninput="recalc()">' +
       '</div>' +
     '</div>' +
     '<div class="fill-head">' +
-      '<span>一盒裡面要放什麼口味</span>' +
+      '<span class="fill-title">一盒裡面要放什麼口味</span>' +
       '<span class="balance"></span>' +
     '</div>' +
     '<div class="fill-list"></div>' +
@@ -297,10 +306,21 @@ function addItem() {
     '<div class="item-sub"></div>';
   document.getElementById('items').appendChild(div);
   fillUnits(div);
+  applyPackLayout(div);
   addFill(div);          // 預設先給一列，只要一種口味的人不用多按
   syncSingleFilling(div);
   renumber();
   recalc();
+}
+
+// 散裝沒有盒子，把「幾入 / 幾盒」收起來，顆數直接由口味加總
+function applyPackLayout(div) {
+  const loose = isLoose(div.querySelector('.pack').value);
+  div.querySelector('.f-units').style.display = loose ? 'none' : '';
+  div.querySelector('.f-boxes').style.display = loose ? 'none' : '';
+  div.querySelector('.fill-title').textContent =
+    loose ? '要哪些口味、各幾顆' : '一盒裡面要放什麼口味';
+  if (loose) div.querySelector('.boxes').value = 1;
 }
 
 // 這盒新增一列口味
@@ -329,6 +349,7 @@ function removeFill(btn) {
 
 // 只有一種口味時，顆數自動等於盒子入數，客人不用自己算
 function syncSingleFilling(div) {
+  if (isLoose(div.querySelector('.pack').value)) return;   // 散裝顆數由客人自己填
   const rows = div.querySelectorAll('.fill-row');
   if (rows.length !== 1) return;
   const units = parseInt(div.querySelector('.units').value) || 0;
@@ -359,13 +380,14 @@ function renumber() {
 function onPackChange(sel) {
   const div = sel.closest('.item-card');
   fillUnits(div);
+  applyPackLayout(div);
   syncSingleFilling(div);
   recalc();
 }
 
 function fillUnits(div) {
   const pack = div.querySelector('.pack').value;
-  const list = pack === '散裝' ? LOOSE_UNITS : GIFT_UNITS;
+  const list = pack === '塑膠盒' ? PLASTIC_UNITS : GIFT_UNITS;
   const sel = div.querySelector('.units');
   const prev = sel.value;
   sel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('');
@@ -375,8 +397,6 @@ function fillUnits(div) {
 // 讀出一張品項卡，格式跟店家系統的品項完全一致，接受後可直接沿用
 function readItem(div) {
   const pack = div.querySelector('.pack').value;
-  const unitsPerBox = parseInt(div.querySelector('.units').value) || 0;
-  const boxes = parseInt(div.querySelector('.boxes').value) || 0;
 
   const fillings = [];
   div.querySelectorAll('.fill-row').forEach(row => {
@@ -385,6 +405,11 @@ function readItem(div) {
     if (name && per > 0) fillings.push({ name: name, per: per });
   });
   const filled = fillings.reduce((s, f) => s + f.per, 0);
+
+  // 散裝沒有盒子：顆數就是各口味加總，盒數固定 1
+  const loose = isLoose(pack);
+  const unitsPerBox = loose ? filled : (parseInt(div.querySelector('.units').value) || 0);
+  const boxes = loose ? 1 : (parseInt(div.querySelector('.boxes').value) || 0);
   const boxPrice = calcBoxPrice(pack, unitsPerBox, fillings);
 
   return {
@@ -411,6 +436,7 @@ function unbalanced() {
   const bad = [];
   document.querySelectorAll('#items .item-card').forEach((div, idx) => {
     const i = readItem(div);
+    if (isLoose(i.pack)) return;   // 散裝的顆數就是加總，不會對不起來
     if (i.fillings.length && i.unitsPerBox && i.filled !== i.unitsPerBox) {
       bad.push('第 ' + (idx + 1) + ' 項：' + i.unitsPerBox + ' 入的盒子，口味卻只配了 ' + i.filled + ' 顆');
     }
@@ -427,7 +453,10 @@ function recalc() {
 
     const bal = div.querySelector('.balance');
     const diff = i.unitsPerBox - i.filled;
-    if (!i.unitsPerBox || !i.fillings.length) {
+    if (isLoose(i.pack)) {
+      bal.textContent = i.filled ? ('共 ' + i.filled + ' 顆') : '';
+      bal.className = 'balance ok';
+    } else if (!i.unitsPerBox || !i.fillings.length) {
       bal.textContent = ''; bal.className = 'balance';
     } else if (diff === 0) {
       bal.textContent = '✓ 剛好 ' + i.unitsPerBox + ' 顆'; bal.className = 'balance ok';
@@ -437,8 +466,9 @@ function recalc() {
       bal.textContent = '多了 ' + (-diff) + ' 顆'; bal.className = 'balance bad';
     }
 
-    div.querySelector('.item-sub').textContent =
-      '每盒 ' + money(i.boxPrice) + ' × ' + i.boxes + ' 盒 ＝ ' + money(i.subtotal);
+    div.querySelector('.item-sub').textContent = isLoose(i.pack)
+      ? (i.filled + ' 顆 ＝ ' + money(i.subtotal))
+      : ('每盒 ' + money(i.boxPrice) + ' × ' + i.boxes + ' 盒 ＝ ' + money(i.subtotal));
   });
   document.getElementById('total').textContent = money(total);
   document.getElementById('pieces').textContent = '共 ' + pieces + ' 顆';
@@ -492,7 +522,9 @@ async function submitOrder() {
 function showDone(d) {
   document.getElementById('form').style.display = 'none';
   const lines = d.items.map(i => {
-    const spec = esc(i.pack) + i.unitsPerBox + '入 × ' + i.boxes + ' 盒';
+    const spec = i.pack === '散裝'
+      ? ('散裝 ' + i.unitsPerBox + ' 顆')
+      : (esc(i.pack) + i.unitsPerBox + '入 × ' + i.boxes + ' 盒');
     const detail = i.fillings && i.fillings.length > 1
       ? '<br><span style="color:#8a7563;font-size:13px">　（' + esc(itemContentsText(i)) + '）</span>'
       : '';
