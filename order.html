@@ -62,6 +62,8 @@ textarea { resize: vertical; min-height: 70px; }
 .fill-row { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
 .fill-row select { flex: 1; min-width: 0; padding: 9px 8px; font-size: 15px; }
 .fill-row input { width: 68px; flex: none; padding: 9px 6px; font-size: 15px; text-align: center; }
+/* 顆數改成下拉後要維持窄欄，不然會跟口味搶寬度 */
+.fill-row .f-per { width: 76px; flex: none; text-align: center; font-weight: bold; }
 .fill-row .u { font-size: 13px; color: #8a7563; flex: none; }
 .fill-row .rm {
   flex: none; background: none; border: none; color: #c62828;
@@ -123,7 +125,7 @@ textarea { resize: vertical; min-height: 70px; }
 
 <div class="header">
   <h1>吉野村現烤蛋糕</h1>
-  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v17</span></div>
+  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v18</span></div>
 </div>
 
 <div class="container">
@@ -145,7 +147,8 @@ textarea { resize: vertical; min-height: 70px; }
       </div>
       <div class="field">
         <label>聯絡電話 <span class="req">*</span></label>
-        <input type="tel" id="phone" placeholder="09xxxxxxxx" maxlength="25">
+        <input type="tel" id="phone" placeholder="09xxxxxxxx" inputmode="numeric" maxlength="10">
+        <div class="hint">10 碼數字</div>
       </div>
       <div class="row">
         <div class="field">
@@ -234,6 +237,34 @@ function isLoose(pack) {
   const list = specs.filter(s => s.pack === pack);
   if (!list.length) return pack === '散裝';
   return list.every(s => !s.units);
+}
+
+// 電話固定十碼：允許輸入空格或連字號，送出前一律去掉只留數字
+function digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
+
+// 顆數下拉：有盒子最多到該盒入數，散裝不設限
+const LOOSE_MAX_PER = 50;
+function perOptions(max, keep) {
+  const n = Math.max(1, Number(max) || LOOSE_MAX_PER);
+  let html = '<option value="">顆</option>';
+  for (let i = 1; i <= n; i++) html += '<option value="' + i + '">' + i + '</option>';
+  if (keep && Number(keep) > n) html += '<option value="' + keep + '">' + keep + '</option>';
+  return html;
+}
+
+function perMaxFor(div) {
+  if (isLoose(div.querySelector('.pack').value)) return LOOSE_MAX_PER;
+  return (parseInt(div.querySelector('.units').value) || 0) || LOOSE_MAX_PER;
+}
+
+// 幾入或包裝改變時重建顆數選項，保留已選的值
+function refreshPerOptions(div) {
+  const max = perMaxFor(div);
+  div.querySelectorAll('.f-per').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = perOptions(max, cur);
+    sel.value = cur;
+  });
 }
 
 // 依實際規格產生說明文字，店家改了規格這裡也會跟著變
@@ -376,7 +407,7 @@ function addFill(div) {
     '<select class="f-name" onchange="recalc()">' +
       products.map(p => '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('') +
     '</select>' +
-    '<input type="number" class="f-per" min="0" max="999" placeholder="顆" oninput="recalc()">' +
+    '<select class="f-per" onchange="recalc()">' + perOptions(perMaxFor(div)) + '</select>' +
     '<span class="u">顆</span>' +
     '<button class="rm" onclick="removeFill(this)" title="刪除">×</button>';
   list.appendChild(row);
@@ -401,7 +432,9 @@ function syncSingleFilling(div) {
 }
 
 function onUnitsChange(sel) {
-  syncSingleFilling(sel.closest('.item-card'));
+  const div = sel.closest('.item-card');
+  refreshPerOptions(div);      // 要先重建選項，syncSingleFilling 才選得到值
+  syncSingleFilling(div);
   recalc();
 }
 
@@ -425,6 +458,7 @@ function onPackChange(sel) {
   const div = sel.closest('.item-card');
   fillUnits(div);
   applyPackLayout(div);
+  refreshPerOptions(div);      // 要先重建選項，syncSingleFilling 才選得到值
   syncSingleFilling(div);
   recalc();
 }
@@ -524,7 +558,8 @@ function showError(msg) {
 
 async function submitOrder() {
   const customer = document.getElementById('customer').value.trim();
-  const phone = document.getElementById('phone').value.trim();
+  // 一律存純數字，店家搜尋和比對重複才不會因為空格或連字號失準
+  const phone = digitsOnly(document.getElementById('phone').value);
   const pickupDate = document.getElementById('pickupDate').value;
   const pickupTime = document.getElementById('pickupTime').value;
   const note = document.getElementById('note').value.trim();
@@ -532,6 +567,7 @@ async function submitOrder() {
 
   if (!customer) { showError('請填寫姓名'); return; }
   if (!phone) { showError('請填寫聯絡電話'); return; }
+  if (phone.length !== 10) { showError('電話要 10 碼數字，目前是 ' + phone.length + ' 碼。'); return; }
   if (!pickupDate) { showError('請選擇取貨日期'); return; }
   if (pickupTimeOutOfRange(pickupTime)) {
     showError('取貨時間 ' + pickupTime + ' 不在營業時間內，請改成 ' + PICKUP_START + ' 到 ' + PICKUP_END + ' 之間。');

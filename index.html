@@ -541,7 +541,9 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
       </div>
       <div class="form-group">
         <label>聯絡電話</label>
-        <input type="text" id="customerPhone" placeholder="請輸入電話">
+        <input type="tel" id="customerPhone" placeholder="09xxxxxxxx"
+               inputmode="numeric" maxlength="10">
+        <div class="date-hint">10 碼數字</div>
       </div>
       <div class="form-group">
         <label>取貨日期</label>
@@ -1368,6 +1370,28 @@ function getProducts() {
   return list.map(p => ({ name: p.name, price: Number(p.price) || 0 }));
 }
 
+// ===== 電話：固定十碼 =====
+// 允許使用者打空格或連字號，存檔前一律去掉，只留數字後檢查長度
+function digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
+function phoneError(s) {
+  const d = digitsOnly(s);
+  if (!d) return '';                       // 沒填就不檢查，電話不是必填
+  if (d.length !== 10) return '電話要 10 碼數字，目前是 ' + d.length + ' 碼。';
+  return '';
+}
+
+// ===== 顆數下拉選單 =====
+// 禮盒／塑膠盒最多只到該盒的入數，散裝沒有盒子就給到 50 顆
+const LOOSE_MAX_PER = 50;
+function perOptions(max, keep) {
+  const n = Math.max(1, Number(max) || LOOSE_MAX_PER);
+  let html = '<option value="">顆</option>';
+  for (let i = 1; i <= n; i++) html += '<option value="' + i + '">' + i + '</option>';
+  // 舊訂單的顆數超出目前上限時補一個選項，編輯時才不會被改掉
+  if (keep && Number(keep) > n) html += '<option value="' + keep + '">' + keep + '</option>';
+  return html;
+}
+
 // 盒子加價：直接查規格表。找不到完全相符的入數，就退回同包裝的第一筆。
 function boxFee(pack, units) {
   const specs = getSpecs();
@@ -1486,14 +1510,18 @@ function addItemRow(item) {
     fillUnitOptions(unitsFor(this.value)[0]);
     unitsCustom.style.display = 'none';
     applyPackLayout();
+    refreshPerOptions(div);
     autoBoxPrice(div); recalcTotals();
   });
   unitsSel.addEventListener('change', function () {
     unitsCustom.style.display = this.value === '__custom' ? 'block' : 'none';
     if (this.value === '__custom') unitsCustom.focus();
+    refreshPerOptions(div);
     autoBoxPrice(div); recalcTotals();
   });
-  unitsCustom.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
+  unitsCustom.addEventListener('input', function () {
+    refreshPerOptions(div); autoBoxPrice(div); recalcTotals();
+  });
   boxesInput.addEventListener('input', recalcTotals);
   // 使用者一旦自己動過價格，就不再自動覆蓋
   priceInput.addEventListener('input', function () { delete priceInput.dataset.auto; recalcTotals(); });
@@ -1550,7 +1578,7 @@ function addFillRow(div, f) {
   row.innerHTML =
     '<select class="f-name"><option value="">-- 選口味 --</option>' + opts +
       '<option value="__custom">自訂口味...</option></select>' +
-    '<input type="number" class="f-per" min="1" placeholder="顆">' +
+    '<select class="f-per"></select>' +
     '<span class="f-unit">顆 / 盒</span>' +
     '<button class="btn btn-danger btn-sm rm-fill">✕</button>' +
     '<input type="text" class="f-custom" placeholder="自訂口味名稱" style="display:none">';
@@ -1566,7 +1594,8 @@ function addFillRow(div, f) {
     autoBoxPrice(div); recalcTotals();
   });
   custom.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
-  per.addEventListener('input', function () { autoBoxPrice(div); recalcTotals(); });
+  per.addEventListener('change', function () { autoBoxPrice(div); recalcTotals(); });
+  per.innerHTML = perOptions(perMaxFor(div), f.per);
   row.querySelector('.rm-fill').addEventListener('click', function () {
     row.remove(); autoBoxPrice(div); recalcTotals();
   });
@@ -1583,6 +1612,23 @@ function addFillRow(div, f) {
     if (remain > 0) per.value = remain;
   }
   return row;
+}
+
+// 這張卡的顆數上限：有盒子就是該盒入數，散裝則不設限
+function perMaxFor(div) {
+  const pack = div.querySelector('.pack').value;
+  if (isLoose(pack)) return LOOSE_MAX_PER;
+  return readUnits(div) || LOOSE_MAX_PER;
+}
+
+// 幾入或包裝改變時，重建這張卡所有顆數下拉的選項，並保留已選的值
+function refreshPerOptions(div) {
+  const max = perMaxFor(div);
+  div.querySelectorAll('.f-per').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = perOptions(max, cur);
+    sel.value = cur;
+  });
 }
 
 function readUnits(div) {
@@ -1766,7 +1812,8 @@ async function uploadPhotos(orderId) {
 // ===== 儲存訂單 =====
 async function saveOrder() {
   const name = document.getElementById('customerName').value.trim();
-  const phone = document.getElementById('customerPhone').value.trim();
+  // 存檔時一律存純數字，之後搜尋、比對重複訂單才不會因為空格或連字號而失準
+  const phone = digitsOnly(document.getElementById('customerPhone').value);
   const pickup = document.getElementById('pickupDate').value;
   const pickupTime = document.getElementById('pickupTime').value;
   const note = document.getElementById('orderNote').value.trim();
@@ -1775,6 +1822,12 @@ async function saveOrder() {
   const editingId = document.getElementById('editingOrderId').value;
 
   if (!name) { alert('請輸入客戶姓名'); return; }
+  const phoneErr = phoneError(phone);
+  if (phoneErr) {
+    alert(phoneErr);
+    document.getElementById('customerPhone').focus();
+    return;
+  }
   if (pickupTimeOutOfRange(pickupTime)) {
     alert('取貨時間 ' + pickupTime + ' 不在營業時間內。\n\n請改成 ' + PICKUP_START + ' 到 ' + PICKUP_END + ' 之間。');
     document.getElementById('pickupTime').focus();
@@ -2559,7 +2612,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v18';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
