@@ -605,6 +605,7 @@ let ordersUnsub = null;
 let productsUnsub = null;
 let retryTimer = null;
 let migrateAsked = false;
+let migrateDone = false;
 let localOrdersAtBoot = [];   // 開機當下這台裝置的訂單，之後才不會被雲端快照蓋掉
 
 const CLOUD_RULES =
@@ -651,13 +652,19 @@ function startCloudSync() {
   ordersUnsub = db.collection('orders').orderBy('createdAt', 'desc')
     .onSnapshot({ includeMetadataChanges: true }, snapshot => {
       onCloudConnected();
+      const fromServer = !snapshot.metadata.fromCache;
+      // 先問要不要上傳，才動本機資料 —— 順序反了會拿空清單蓋掉這台的舊訂單
+      if (fromServer) offerMigrateLocalOrders(snapshot.empty);
+
       ordersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderOrders(); updatePickupFilter(); updateHeaderStats();
-      safeSetItem('yoshino_orders', JSON.stringify(ordersCache));
+      // 雲端是空的、而這台原本有訂單又還沒決定要不要上傳時，不要覆蓋本機那份
+      const wouldWipeLocal = snapshot.empty && localOrdersAtBoot.length && !migrateDone;
+      if (!wouldWipeLocal) safeSetItem('yoshino_orders', JSON.stringify(ordersCache));
+
       if (snapshot.metadata.hasPendingWrites) setCloudStatus('wait', '☁ 上傳中…');
-      else if (snapshot.metadata.fromCache) setCloudStatus('wait', '☁ 離線暫存（會自動補送）');
+      else if (!fromServer) setCloudStatus('wait', '☁ 離線暫存（會自動補送）');
       else setCloudStatus('ok', '☁ 已即時同步');
-      if (!snapshot.metadata.fromCache) offerMigrateLocalOrders(snapshot.empty);
     }, onCloudError);
 
   productsUnsub = db.collection('settings').doc('products')
@@ -692,11 +699,11 @@ function offerMigrateLocalOrders(cloudEmpty) {
   // 用開機時記下來的那份，不能重讀 localStorage —— 它已經被雲端快照覆蓋成空的了
   const local = localOrdersAtBoot;
   if (!local.length) return;
-  if (!confirm('雲端目前沒有任何訂單，這台裝置有 ' + local.length + ' 筆舊訂單。\n\n要把它們上傳到雲端，讓其他手機也看得到嗎？')) return;
+  if (!confirm('雲端目前沒有任何訂單，這台裝置有 ' + local.length + ' 筆舊訂單。\n\n要把它們上傳到雲端，讓其他手機也看得到嗎？\n\n（就算按取消，這台的訂單也不會消失）')) return;
   const batch = db.batch();
   local.forEach(o => { if (o && o.id) batch.set(db.collection('orders').doc(o.id), o); });
   batch.commit()
-    .then(() => alert('已上傳 ' + local.length + ' 筆訂單，其他裝置重新整理就會看到。'))
+    .then(() => { migrateDone = true; alert('已上傳 ' + local.length + ' 筆訂單，其他裝置重新整理就會看到。'); })
     .catch(err => alert('上傳失敗：' + ((err && err.message) || err)));
 }
 
@@ -731,6 +738,8 @@ function loadLocal() {
   catch (e) { ordersCache = []; }
   if (!Array.isArray(ordersCache)) ordersCache = [];
   localOrdersAtBoot = ordersCache.slice();
+  // 永久備份：雲端同步不會動這一份，資料真的不見時還救得回來
+  if (ordersCache.length) safeSetItem('yoshino_orders_backup', JSON.stringify(ordersCache));
   renderOrders(); updatePickupFilter(); updateHeaderStats();
 }
 
