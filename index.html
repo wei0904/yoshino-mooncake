@@ -468,7 +468,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div class="header">
   <div>
     <h1>吉野村現烤蛋糕</h1>
-    <div class="subtitle">月餅訂單管理系統</div>
+    <div class="subtitle">月餅訂單管理系統 <span id="appVersion" style="opacity:.7"></span></div>
   </div>
   <div style="text-align:right">
     <div id="headerStats" style="font-size:13px;opacity:0.9"></div>
@@ -2282,6 +2282,10 @@ if ('serviceWorker' in navigator) {
 }
 
 // ===== Init =====
+// 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
+const APP_VERSION = 'v10';
+document.getElementById('appVersion').textContent = APP_VERSION;
+
 addItemRow();
 recalcTotals();
 renderOrders();
