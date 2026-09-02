@@ -718,9 +718,8 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
         <button class="btn btn-outline btn-sm" onclick="toggleSpecForm(false)">取消</button>
       </div>
     </div>
-    <button class="btn btn-outline btn-sm" id="specAddBtn" onclick="toggleSpecForm(true)">＋ 新增規格</button>
-
     <div class="btn-group">
+      <button class="btn btn-outline" id="specAddBtn" onclick="toggleSpecForm(true)">＋ 新增規格</button>
       <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
     </div>
   </div>
@@ -2468,7 +2467,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
