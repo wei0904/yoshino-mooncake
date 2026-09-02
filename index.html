@@ -930,7 +930,9 @@ function showCloudInfo() {
     if (shopUser) {
       if (confirm(info + '\n\n目前登入：' + shopUser.email + '\n\n要登出嗎？')) doLogout();
     } else {
-      alert(info + '\n\n（目前未登入）');
+      // 先前按過「先直接使用」的人，這裡是唯一能回到登入畫面的入口
+      if (confirm(info + '\n\n⚠ 目前未登入（先前選了「先直接使用」）。\n\n' +
+          '收緊權限後必須登入才能存取訂單。\n\n要現在登入店家帳號嗎？')) showLoginScreen();
     }
     return;
   }
@@ -1096,6 +1098,14 @@ function backToChoice() {
 
 // 還沒在 Firebase 建好帳號時的逃生門。規則收緊後這條路會被伺服器擋下來，
 // 所以留著它不會削弱安全性，只是避免設定到一半把自己鎖在外面。
+// 回到登入畫面：清掉「先直接使用」的記憶，並直接展開帳密欄位
+function showLoginScreen() {
+  loginSkipped = false;
+  try { localStorage.removeItem('yoshino_skip_login'); } catch (e) {}
+  showLoginGate();
+  showShopLogin();
+}
+
 function skipLogin() {
   loginSkipped = true;
   try { localStorage.setItem('yoshino_skip_login', '1'); } catch (e) {}
@@ -1132,6 +1142,8 @@ async function doLogin() {
 
 function doLogout() {
   if (!auth) return;
+  // 一併清掉「先直接使用」的記憶，登出後才會回到登入畫面而不是直接進系統
+  try { localStorage.removeItem('yoshino_skip_login'); } catch (e) {}
   auth.signOut().then(() => location.reload());
 }
 
@@ -2618,7 +2630,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
