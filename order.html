@@ -123,7 +123,7 @@ textarea { resize: vertical; min-height: 70px; }
 
 <div class="header">
   <h1>吉野村現烤蛋糕</h1>
-  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v16</span></div>
+  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v17</span></div>
 </div>
 
 <div class="container">
@@ -556,9 +556,19 @@ async function submitOrder() {
   };
 
   try {
-    await db.collection('submissions').add(data);
+    // 收訊不好時不要無限轉圈：20 秒沒收到伺服器確認就給明確訊息
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('__TIMEOUT__')), 20000));
+    await Promise.race([db.collection('submissions').add(data), timeout]);
     showDone(data);
   } catch (e) {
+    if (e && e.message === '__TIMEOUT__') {
+      btn.disabled = false;
+      btn.textContent = '送出預訂單';
+      showError('網路狀況不佳，還沒收到送出成功的確認。\n' +
+        '請確認網路後再按一次送出。若重複送出，我們會在確認時幫您合併。');
+      return;
+    }
     btn.disabled = false;
     btn.textContent = '送出預訂單';
     const code = String((e && (e.code || e.message)) || e);

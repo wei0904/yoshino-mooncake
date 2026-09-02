@@ -837,10 +837,13 @@ function startCloudSync() {
       ordersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderOrders(); updatePickupFilter(); updateHeaderStats();
       // 雲端是空的、而這台原本有訂單又還沒決定要不要上傳時，不要覆蓋本機那份
-      const wouldWipeLocal = snapshot.empty && localOrdersAtBoot.length && !migrateDone;
+      // 搬移問過之後，雲端是空的就代表真的全刪光了，本機要跟著清掉
+      const wouldWipeLocal = snapshot.empty && localOrdersAtBoot.length && !migrateDone && !hasMigrated();
       if (!wouldWipeLocal) safeSetItem('yoshino_orders', JSON.stringify(ordersCache));
 
-      if (snapshot.metadata.hasPendingWrites) setCloudStatus('wait', '☁ 上傳中…');
+      const waiting = pendingCount();
+      if (waiting) setCloudStatus('wait', '⚠ ' + waiting + ' 筆待上傳（點我）');
+      else if (snapshot.metadata.hasPendingWrites) setCloudStatus('wait', '☁ 上傳中…');
       else if (!fromServer) setCloudStatus('wait', '☁ 離線暫存（會自動補送）');
       else setCloudStatus('ok', '☁ 已即時同步');
     }, onCloudError);
@@ -860,9 +863,11 @@ function startCloudSync() {
 }
 
 function onCloudConnected() {
+  const wasOffline = !useCloud;
   useCloud = true;
   cloudError = '';
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  if (wasOffline || pendingCount()) flushPending();   // 一連上就把積著的異動補送出去
 }
 
 function onCloudError(err) {
@@ -874,17 +879,38 @@ function onCloudError(err) {
 }
 
 // 第一次接上雲端、而雲端還是空的時候，把這台裝置的舊訂單推上去
+function hasMigrated() {
+  try { return localStorage.getItem('yoshino_migrated') === '1'; } catch (e) { return false; }
+}
+function markMigrated() { safeSetItem('yoshino_migrated', '1'); }
+
 function offerMigrateLocalOrders(cloudEmpty) {
   if (migrateAsked || !cloudEmpty) return;
   migrateAsked = true;
+
+  // 只問這一次，之後永遠不再問。否則你把訂單刪光之後，雲端變成空的，
+  // 這台手機又會提議把本機那份舊資料搬回去 —— 刪掉的訂單就復活了。
+  if (hasMigrated()) return;
+
   // 用開機時記下來的那份，不能重讀 localStorage —— 它已經被雲端快照覆蓋成空的了
   const local = localOrdersAtBoot;
-  if (!local.length) return;
-  if (!confirm('雲端目前沒有任何訂單，這台裝置有 ' + local.length + ' 筆舊訂單。\n\n要把它們上傳到雲端，讓其他手機也看得到嗎？\n\n（就算按取消，這台的訂單也不會消失）')) return;
+  if (!local.length) { markMigrated(); return; }
+
+  if (!confirm('雲端目前沒有任何訂單，這台裝置有 ' + local.length + ' 筆舊訂單。\n\n' +
+      '要把它們上傳到雲端，讓其他手機也看得到嗎？\n\n' +
+      '（這個問題只會出現這一次。按取消的話，這台的訂單不會消失，但也不會上傳。）')) {
+    markMigrated();
+    return;
+  }
+
   const batch = db.batch();
   local.forEach(o => { if (o && o.id) batch.set(db.collection('orders').doc(o.id), o); });
   batch.commit()
-    .then(() => { migrateDone = true; alert('已上傳 ' + local.length + ' 筆訂單，其他裝置重新整理就會看到。'); })
+    .then(() => {
+      migrateDone = true;
+      markMigrated();
+      alert('已上傳 ' + local.length + ' 筆訂單，其他裝置重新整理就會看到。');
+    })
     .catch(err => alert('上傳失敗：' + ((err && err.message) || err)));
 }
 
@@ -906,7 +932,9 @@ function showCloudInfo() {
     }
     return;
   }
+  const waiting = pendingCount();
   alert('⚠ 目前是本機模式：訂單只存在這台裝置，其他手機／電腦看不到。\n\n' +
+    (waiting ? '有 ' + waiting + ' 筆異動還沒上傳，連上雲端後會自動補送，不會弄丟。\n\n' : '') +
     '錯誤訊息：' + (cloudError || '（無）') + '\n\n' +
     (String(cloudError).indexOf('permission') !== -1 || String(cloudError).indexOf('PERMISSION') !== -1
       ? '這是「Firestore 安全性規則擋住了」。\n' +
@@ -942,6 +970,54 @@ function cloudWrite(fn) {
   return Promise.resolve();
 }
 
+// ===========================================
+// ===== 待補送佇列 =====
+// 連不上雲端時把每一筆異動記下來，連上之後照順序補送，
+// 這樣新訂單一定會上傳，離線時的刪除也會確實同步出去。
+// ===========================================
+const PENDING_KEY = 'yoshino_pending';
+let flushing = false;
+
+function loadPending() {
+  try {
+    const a = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    return Array.isArray(a) ? a : [];
+  } catch (e) { return []; }
+}
+
+function savePending(list) { safeSetItem(PENDING_KEY, JSON.stringify(list)); }
+
+// 同一筆訂單只保留最後一次操作，改了五次不會補送五遍
+function queueWrite(op, id, data) {
+  if (!id) return;
+  const list = loadPending().filter(x => x.id !== id);
+  list.push({ op: op, id: id, data: data || null });
+  savePending(list);
+}
+
+function pendingCount() { return loadPending().length; }
+
+async function flushPending() {
+  if (flushing || !useCloud || !db) return;
+  if (!pendingCount()) return;
+  flushing = true;
+  try {
+    // 一筆一筆送，任何一筆失敗就整批留著，下次連上再試
+    for (;;) {
+      const list = loadPending();
+      if (!list.length) break;
+      const w = list[0];
+      if (w.op === 'delete') await db.collection('orders').doc(w.id).delete();
+      else await db.collection('orders').doc(w.id).set(w.data);
+      savePending(loadPending().filter(x => x.id !== w.id));
+    }
+  } catch (e) {
+    console.warn('補送失敗，保留在佇列裡下次再試：' + ((e && e.code) || e));
+  } finally {
+    flushing = false;
+  }
+}
+
 function reportWriteError(err) {
   const code = String((err && (err.code || err.message)) || err);
   console.error('雲端寫入失敗：' + code);
@@ -950,9 +1026,25 @@ function reportWriteError(err) {
   else alert('這筆資料沒有同步到雲端：' + code);
 }
 
-function cloudSaveOrder(order) { return cloudWrite(() => db.collection('orders').doc(order.id).set(order)); }
-function cloudDeleteOrder(id) { return cloudWrite(() => db.collection('orders').doc(id).delete()); }
-function cloudUpdateOrder(id, data) { return cloudWrite(() => db.collection('orders').doc(id).update(data)); }
+function cloudSaveOrder(order) {
+  if (!useCloud) { queueWrite('set', order.id, order); return Promise.resolve(); }
+  return cloudWrite(() => db.collection('orders').doc(order.id).set(order));
+}
+
+function cloudDeleteOrder(id) {
+  if (!useCloud) { queueWrite('delete', id, null); return Promise.resolve(); }
+  return cloudWrite(() => db.collection('orders').doc(id).delete());
+}
+
+function cloudUpdateOrder(id, data) {
+  if (!useCloud) {
+    // 補送時整筆覆蓋，避免 update 打到雲端還不存在的文件而失敗
+    const o = ordersCache.find(x => x.id === id);
+    if (o) queueWrite('set', id, o);
+    return Promise.resolve();
+  }
+  return cloudWrite(() => db.collection('orders').doc(id).update(data));
+}
 
 // ===========================================
 // ===== 店家登入 =====
@@ -2467,7 +2559,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v16';
+const APP_VERSION = 'v17';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
