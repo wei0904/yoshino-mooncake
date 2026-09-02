@@ -123,7 +123,7 @@ textarea { resize: vertical; min-height: 70px; }
 
 <div class="header">
   <h1>吉野村現烤蛋糕</h1>
-  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v14（＝v11）</span></div>
+  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v15</span></div>
 </div>
 
 <div class="container">
@@ -163,7 +163,7 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="card">
       <h2>訂購內容</h2>
       <p style="font-size:13px;color:#8a7563;margin-bottom:12px">
-        <b>禮盒</b>可選 6～15 入，<b>塑膠盒</b>固定 6 入，<b>散裝</b>沒有盒子、要幾顆就填幾顆。<br>
+        <span id="packHint"></span><br>
         一盒可以混搭不同口味 —— 例如 10 入禮盒要蛋黃酥 4 顆、綠豆椪 6 顆，
         就按「再加一種口味」分開填，顆數加起來等於盒子入數就可以了。
       </p>
@@ -203,14 +203,48 @@ const firebaseConfig = {
 };
 
 // 跟店家系統同一套預設值，讀不到雲端設定時才會用到
-const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, plastic: 0 };
+const DEFAULT_PRICING = { unitPrice: 55 };   // 盒子加價已移到規格表
 const DEFAULT_PRODUCTS = [
   { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
   { name: '芋頭酥' }, { name: '金月亮' },
 ];
-const GIFT_UNITS = [6, 9, 10, 12, 15];
-const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
-const PACKS = ['禮盒', '塑膠盒', '散裝'];
+// 規格＝一組「包裝 × 入數 × 盒子加價」，由店家在設定裡維護。入數 0 代表散裝。
+const DEFAULT_SPECS = [
+  { pack: '禮盒', units: 6, fee: 30 },
+  { pack: '禮盒', units: 9, fee: 50 },
+  { pack: '禮盒', units: 10, fee: 50 },
+  { pack: '禮盒', units: 12, fee: 50 },
+  { pack: '禮盒', units: 15, fee: 50 },
+  { pack: '塑膠盒', units: 6, fee: 0 },
+  { pack: '散裝', units: 0, fee: 0 },
+];
+let specs = DEFAULT_SPECS.slice();
+
+function getPacks() {
+  const out = [];
+  specs.forEach(s => { if (out.indexOf(s.pack) === -1) out.push(s.pack); });
+  return out.length ? out : ['禮盒'];
+}
+
+function unitsFor(pack) {
+  return specs.filter(s => s.pack === pack && s.units > 0).map(s => s.units);
+}
+
+function isLoose(pack) {
+  const list = specs.filter(s => s.pack === pack);
+  if (!list.length) return pack === '散裝';
+  return list.every(s => !s.units);
+}
+
+// 依實際規格產生說明文字，店家改了規格這裡也會跟著變
+function renderPackHint() {
+  document.getElementById('packHint').textContent = getPacks().map(p => {
+    const us = unitsFor(p);
+    if (!us.length) return p + '沒有盒子、要幾顆就填幾顆';
+    if (us.length === 1) return p + '固定 ' + us[0] + ' 入';
+    return p + '可選 ' + Math.min.apply(null, us) + '～' + Math.max.apply(null, us) + ' 入';
+  }).join('，') + '。';
+}
 
 // 營業時段：早上 7 點到下午 6 點。時間可以自由填，但超出範圍不給送出。
 const PICKUP_START = '07:00';
@@ -236,10 +270,11 @@ db.collection('settings').doc('products').get()
     if (doc.exists) {
       const d = doc.data();
       if (d.list && d.list.length) products = d.list;
-      if (d.pricing) {
-        pricing = Object.assign({}, DEFAULT_PRICING, d.pricing);
-        // 舊設定把塑膠盒加價存在 loose 欄位
-        if (d.pricing.plastic == null && d.pricing.loose != null) pricing.plastic = Number(d.pricing.loose) || 0;
+      if (d.pricing) pricing = Object.assign({}, DEFAULT_PRICING, d.pricing);
+      if (d.specs && d.specs.length) {
+        specs = d.specs
+          .map(x => ({ pack: String(x.pack || '').trim(), units: Number(x.units) || 0, fee: Number(x.fee) || 0 }))
+          .filter(x => x.pack);
       }
     }
   })
@@ -247,6 +282,7 @@ db.collection('settings').doc('products').get()
   .then(() => {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form').style.display = '';
+    renderPackHint();
     addItem();
   });
 
@@ -257,17 +293,13 @@ function esc(s) {
 }
 function money(n) { return '$' + (Number(n) || 0).toLocaleString(); }
 
-// 盒子加價：禮盒 6 入一種價、其他入數另一種價；塑膠盒自訂（預設 0）；散裝沒有盒子
+// 盒子加價：直接查規格表。找不到完全相符的入數，就退回同包裝的第一筆。
 function boxFee(pack, units) {
-  if (pack === '散裝') return 0;
-  if (pack === '塑膠盒') return Number(pricing.plastic) || 0;
-  return Number(units) === 6
-    ? (Number(pricing.giftSix) || 0)
-    : (Number(pricing.giftOther) || 0);
+  const hit = specs.find(s => s.pack === pack && Number(s.units) === Number(units));
+  if (hit) return hit.fee;
+  const same = specs.find(s => s.pack === pack);
+  return same ? same.fee : 0;
 }
-
-// 散裝沒有「幾入」，顆數就是各口味加總
-function isLoose(pack) { return pack === '散裝'; }
 
 // 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
 // 跟店家系統同一套算法，混搭禮盒也照這個算
@@ -297,7 +329,7 @@ function addItem() {
       '<div class="field">' +
         '<label>包裝</label>' +
         '<select class="pack" onchange="onPackChange(this)">' +
-          PACKS.map(p => '<option value="' + p + '">' + p + '</option>').join('') +
+          getPacks().map(p => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join('') +
         '</select>' +
       '</div>' +
       '<div class="field f-units">' +
@@ -398,8 +430,7 @@ function onPackChange(sel) {
 }
 
 function fillUnits(div) {
-  const pack = div.querySelector('.pack').value;
-  const list = pack === '塑膠盒' ? PLASTIC_UNITS : GIFT_UNITS;
+  const list = unitsFor(div.querySelector('.pack').value);
   const sel = div.querySelector('.units');
   const prev = sel.value;
   sel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('');

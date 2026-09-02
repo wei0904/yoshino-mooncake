@@ -559,7 +559,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 
     <h3 style="font-size:15px;color:#8B4513;margin:18px 0 6px;padding-bottom:8px;border-bottom:2px solid #f0e4d4">訂購內容</h3>
     <p style="font-size:13px;color:#8a7563;margin-bottom:12px">
-      <b>禮盒</b>可選 6～15 入，<b>塑膠盒</b>固定 6 入，<b>散裝</b>沒有盒子、要幾顆就填幾顆。<br>
+      <span id="packHint"></span><br>
       一盒可以混搭不同口味 —— 例如 10 入禮盒要蛋黃酥 4 顆、綠豆椪 6 顆，
       就按「再加一種口味」分開填，顆數加起來等於盒子入數就可以了。
     </p>
@@ -684,28 +684,42 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div class="container">
   <div class="card">
     <h2>價格設定</h2>
-    <p class="hint">算法是 <b>每顆單價 × 顆數 ＋ 盒子加價</b>。混搭禮盒也照這個算，不用另外設價。<br>
-      塑膠盒固定 6 入，散裝沒有盒子、只算顆數。</p>
+    <p class="hint">算法是 <b>每顆單價 × 顆數 ＋ 盒子加價</b>。混搭也照這個算，不用另外設價。</p>
     <div class="form-row">
       <div class="form-group">
-        <label>每顆單價</label>
+        <label>每顆單價（預設）</label>
         <input type="number" id="unitPriceInput" min="0" oninput="renderPricePreview()">
-      </div>
-      <div class="form-group">
-        <label>禮盒 6 入加價</label>
-        <input type="number" id="giftSixInput" min="0" oninput="renderPricePreview()">
-      </div>
-      <div class="form-group">
-        <label>禮盒 其他入數加價</label>
-        <input type="number" id="giftOtherInput" min="0" oninput="renderPricePreview()">
-      </div>
-      <div class="form-group">
-        <label>塑膠盒加價</label>
-        <input type="number" id="plasticInput" min="0" oninput="renderPricePreview()">
+        <div class="hint">改這裡整張表的價格都會跟著重算</div>
       </div>
     </div>
+
     <h3 style="font-size:14px;color:#8B4513;margin:18px 0 8px">一盒賣多少（試算）</h3>
     <table class="summary-table" id="pricePreview"></table>
+
+    <!-- 新增規格：平常收起來，按下面的按鈕才展開 -->
+    <div id="specAddForm" style="display:none;margin-top:10px;padding:12px;
+         background:#fdf6ee;border:1px dashed #D2691E;border-radius:8px">
+      <div class="form-row">
+        <div class="form-group">
+          <label>包裝名稱</label>
+          <input type="text" id="newSpecPack" placeholder="例如：禮盒、紙袋">
+        </div>
+        <div class="form-group">
+          <label>入數（散裝留空）</label>
+          <input type="number" id="newSpecUnits" min="1" placeholder="留空＝散裝">
+        </div>
+        <div class="form-group">
+          <label>盒子加價</label>
+          <input type="number" id="newSpecFee" min="0" value="0">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="confirmAddSpec()">加入</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleSpecForm(false)">取消</button>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" id="specAddBtn" onclick="toggleSpecForm(true)">＋ 新增規格</button>
+
     <div class="btn-group">
       <button class="btn btn-primary" onclick="saveProducts()">儲存設定</button>
     </div>
@@ -839,6 +853,7 @@ function startCloudSync() {
       const d = doc.data();
       if (d.list) safeSetItem('yoshino_products', JSON.stringify(d.list));
       if (d.pricing) safeSetItem('yoshino_pricing', JSON.stringify(d.pricing));
+      if (d.specs && d.specs.length) safeSetItem('yoshino_specs', JSON.stringify(d.specs));
       if (document.querySelector('#section-settings').classList.contains('active')) renderProductSettings();
     }, onCloudError);
 
@@ -1147,9 +1162,83 @@ async function rejectSubmission(id) {
 }
 
 // ===== 常數 =====
-const GIFT_UNITS = [6, 9, 10, 12, 15];
-const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
-const PACKS = ['禮盒', '塑膠盒', '散裝'];
+// 規格＝一組「包裝 × 入數 × 盒子加價」。入數留空（0）代表散裝，顆數由口味加總決定。
+// 這份只是第一次使用時的預設值，之後完全由「產品設定」那張表決定。
+const DEFAULT_SPECS = [
+  { pack: '禮盒', units: 6, fee: 30 },
+  { pack: '禮盒', units: 9, fee: 50 },
+  { pack: '禮盒', units: 10, fee: 50 },
+  { pack: '禮盒', units: 12, fee: 50 },
+  { pack: '禮盒', units: 15, fee: 50 },
+  { pack: '塑膠盒', units: 6, fee: 0 },
+  { pack: '散裝', units: 0, fee: 0 },
+];
+
+function getSpecs() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem('yoshino_specs') || 'null'); } catch (e) { s = null; }
+  if (Array.isArray(s) && s.length) {
+    return s.map(x => ({ pack: String(x.pack || '').trim(), units: Number(x.units) || 0, fee: Number(x.fee) || 0 }))
+            .filter(x => x.pack);
+  }
+  // 還沒有規格表時，用舊版的加價欄位組出來，升級後設定才不會被預設值蓋掉
+  const p = legacyPricing();
+  if (p) {
+    return [6, 9, 10, 12, 15].map(u => ({ pack: '禮盒', units: u, fee: u === 6 ? p.giftSix : p.giftOther }))
+      .concat([{ pack: '塑膠盒', units: 6, fee: p.plastic }, { pack: '散裝', units: 0, fee: 0 }]);
+  }
+  return DEFAULT_SPECS.slice();
+}
+
+// 舊版存在 yoshino_pricing 裡的盒子加價，只在還沒建立規格表時用得到
+function legacyPricing() {
+  let p;
+  try { p = JSON.parse(localStorage.getItem('yoshino_pricing') || 'null'); }
+  catch (e) { return null; }
+  if (!p) return null;
+  const num = (v, d) => (v != null && v !== '') ? Number(v) : d;
+  const hasAny = p.giftSix != null || p.giftOther != null || p.plastic != null || p.loose != null;
+  if (!hasAny) return null;
+  return {
+    giftSix: num(p.giftSix, 30),
+    giftOther: num(p.giftOther, 50),
+    plastic: num(p.plastic, num(p.loose, 0))
+  };
+}
+
+// 依實際規格表產生說明文字，規格改了說明也會跟著變
+function packHintText() {
+  return getPacks().map(p => {
+    const us = unitsFor(p);
+    if (!us.length) return p + '沒有盒子、要幾顆就填幾顆';
+    if (us.length === 1) return p + '固定 ' + us[0] + ' 入';
+    return p + '可選 ' + Math.min.apply(null, us) + '～' + Math.max.apply(null, us) + ' 入';
+  }).join('，') + '。';
+}
+
+function renderPackHint() {
+  const el = document.getElementById('packHint');
+  if (el) el.textContent = packHintText();
+}
+
+// 包裝下拉的選項＝規格表裡出現過的包裝名稱（保留輸入順序，不重複）
+function getPacks() {
+  const out = [];
+  getSpecs().forEach(s => { if (out.indexOf(s.pack) === -1) out.push(s.pack); });
+  return out.length ? out : ['禮盒'];
+}
+
+// 某個包裝可選的入數
+function unitsFor(pack) {
+  return getSpecs().filter(s => s.pack === pack && s.units > 0).map(s => s.units);
+}
+
+// 這個包裝底下沒有任何固定入數，就是散裝
+function isLoose(pack) {
+  const list = getSpecs().filter(s => s.pack === pack);
+  if (!list.length) return pack === '散裝';   // 規格被刪掉的舊訂單，靠名稱判斷
+  return list.every(s => !s.units);
+}
 
 // 營業時段：早上 7 點到下午 6 點。時間可以自由填，但超出範圍不給存。
 const PICKUP_START = '07:00';
@@ -1163,7 +1252,7 @@ function pickupTimeOutOfRange(t) {
 }
 
 // 價格規則：每顆單價 × 顆數 ＋ 盒子加價
-const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, plastic: 0 };
+const DEFAULT_PRICING = { unitPrice: 55 };
 
 const DEFAULT_PRODUCTS = [
   { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
@@ -1175,14 +1264,9 @@ function getPricing() {
   try { p = JSON.parse(localStorage.getItem('yoshino_pricing') || 'null'); }
   catch (e) { p = null; }
   p = p || {};
-  const pick = k => (p[k] != null && p[k] !== '') ? Number(p[k]) : DEFAULT_PRICING[k];
-  // 舊資料把塑膠盒的加價存在 loose 欄位，沿用過來才不會設定跑掉
-  const plastic = (p.plastic != null && p.plastic !== '') ? Number(p.plastic)
-    : ((p.loose != null && p.loose !== '') ? Number(p.loose) : DEFAULT_PRICING.plastic);
-  return {
-    unitPrice: pick('unitPrice'), giftSix: pick('giftSix'),
-    giftOther: pick('giftOther'), plastic: plastic
-  };
+  // 盒子加價已經移到規格表，這裡只剩每顆的預設單價
+  const up = (p.unitPrice != null && p.unitPrice !== '') ? Number(p.unitPrice) : DEFAULT_PRICING.unitPrice;
+  return { unitPrice: up };
 }
 
 function getProducts() {
@@ -1193,16 +1277,14 @@ function getProducts() {
   return list.map(p => ({ name: p.name, price: Number(p.price) || 0 }));
 }
 
-// 盒子加價：禮盒 6 入一種價、其他入數另一種價；塑膠盒自訂（預設 0）；散裝沒有盒子
+// 盒子加價：直接查規格表。找不到完全相符的入數，就退回同包裝的第一筆。
 function boxFee(pack, units) {
-  const pr = getPricing();
-  if (pack === '散裝') return 0;
-  if (pack === '塑膠盒') return pr.plastic;
-  return Number(units) === 6 ? pr.giftSix : pr.giftOther;
+  const specs = getSpecs();
+  const hit = specs.find(s => s.pack === pack && Number(s.units) === Number(units));
+  if (hit) return hit.fee;
+  const same = specs.find(s => s.pack === pack);
+  return same ? same.fee : 0;
 }
-
-// 散裝沒有「幾入」的概念，顆數由客人點的口味加總決定
-function isLoose(pack) { return pack === '散裝'; }
 
 // 一盒多少錢＝盒內各口味（顆數 × 該口味單價）相加，再加盒子加價
 function calcBoxPrice(pack, units, fillings) {
@@ -1264,7 +1346,7 @@ function addItemRow(item) {
     '</div>' +
     '<div class="item-fields">' +
       '<div><label>包裝</label><select class="pack">' +
-        PACKS.map(p => '<option value="' + p + '">' + p + '</option>').join('') +
+        getPacks().map(p => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join('') +
       '</select></div>' +
       '<div class="f-units"><label>幾入</label><select class="units"></select>' +
         '<input type="number" class="units-custom" min="1" placeholder="入數" style="display:none;margin-top:4px"></div>' +
@@ -1287,11 +1369,9 @@ function addItemRow(item) {
   const priceInput = div.querySelector('.boxprice');
 
   function fillUnitOptions(keep) {
-    const pack = packSel.value;
-    const list = pack === '塑膠盒' ? PLASTIC_UNITS : GIFT_UNITS;
-    // 塑膠盒固定 6 入，不給自訂
+    const list = unitsFor(packSel.value);
     unitsSel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('') +
-      (pack === '塑膠盒' ? '' : '<option value="__custom">自訂</option>');
+      '<option value="__custom">自訂</option>';
     if (keep != null && list.includes(Number(keep))) unitsSel.value = String(keep);
   }
 
@@ -1312,7 +1392,7 @@ function addItemRow(item) {
     addFillRow(div); autoBoxPrice(div); recalcTotals();
   });
   packSel.addEventListener('change', function () {
-    fillUnitOptions(this.value === '塑膠盒' ? 6 : 10);
+    fillUnitOptions(unitsFor(this.value)[0]);
     unitsCustom.style.display = 'none';
     applyPackLayout();
     autoBoxPrice(div); recalcTotals();
@@ -1335,9 +1415,15 @@ function addItemRow(item) {
   });
 
   // 帶入既有資料
-  packSel.value = PACKS.includes(item.pack) ? item.pack : '禮盒';
+  // 舊訂單的包裝若已從規格表刪掉，補一個選項保留它，編輯時才不會被改掉
+  const packs = getPacks();
+  if (item.pack && packs.indexOf(item.pack) === -1) {
+    packSel.insertAdjacentHTML('beforeend',
+      '<option value="' + esc(item.pack) + '">' + esc(item.pack) + '（已刪除）</option>');
+  }
+  packSel.value = item.pack || packs[0];
   applyPackLayout();
-  const units = Number(item.unitsPerBox) || Number(item.qty) || (packSel.value === '塑膠盒' ? 6 : 10);
+  const units = Number(item.unitsPerBox) || Number(item.qty) || unitsFor(packSel.value)[0] || 0;
   fillUnitOptions(units);
   if (!isLoose(packSel.value) && unitsSel.value !== String(units)) {
     unitsSel.value = '__custom';
@@ -2167,9 +2253,8 @@ function renderPacking() {
 function renderProductSettings() {
   const pr = getPricing();
   document.getElementById('unitPriceInput').value = pr.unitPrice;
-  document.getElementById('giftSixInput').value = pr.giftSix;
-  document.getElementById('giftOtherInput').value = pr.giftOther;
-  document.getElementById('plasticInput').value = pr.plastic;
+  pendingSpecs = getSpecs();          // 編輯中的規格，按「儲存設定」才寫回去
+  toggleSpecForm(false);
   renderPricePreview();
   document.getElementById('productList').innerHTML = getProducts().map(p => productRowHtml(p)).join('');
 }
@@ -2177,23 +2262,69 @@ function renderProductSettings() {
 // 讀畫面上（還沒存）的數字，讓試算能即時反應
 function readPricingInputs() {
   const g = id => Number(document.getElementById(id).value) || 0;
-  return { unitPrice: g('unitPriceInput'), giftSix: g('giftSixInput'), giftOther: g('giftOtherInput'), plastic: g('plasticInput') };
+  return { unitPrice: g('unitPriceInput') };
 }
+
+// ===== 包裝規格：直接在試算表上增刪 =====
+let pendingSpecs = [];
 
 function renderPricePreview() {
   const pr = readPricingInputs();
-  const rows = GIFT_UNITS.map(u => ({ label: '禮盒' + u + '入', u: u, fee: u === 6 ? pr.giftSix : pr.giftOther }))
-    .concat(PLASTIC_UNITS.map(u => ({ label: '塑膠盒' + u + '入', u: u, fee: pr.plastic })))
-    .concat([{ label: '散裝 1 顆', u: 1, fee: 0 }]);
-  document.getElementById('pricePreview').innerHTML =
-    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">價格</th></tr></thead><tbody>' +
-    rows.map(r =>
-      '<tr><td><b>' + r.label + '</b></td>' +
-      '<td style="color:#5c5c5c;font-size:13px">' + r.u + ' 顆 × ' + pr.unitPrice +
-        (r.fee ? ' ＋ 盒子 ' + r.fee : '') + '</td>' +
-      '<td style="text-align:right;font-size:20px;font-weight:bold;color:#c62828">' +
-        money(pr.unitPrice * r.u + r.fee) + '</td></tr>'
-    ).join('') + '</tbody>';
+  const box = document.getElementById('pricePreview');
+  if (!pendingSpecs.length) {
+    box.innerHTML = '<tbody><tr><td style="color:#8a7563">' +
+      '還沒有任何規格，按下面的「＋ 新增規格」加一筆。</td></tr></tbody>';
+    return;
+  }
+  box.innerHTML =
+    '<thead><tr><th>規格</th><th>算式</th><th style="text-align:right">價格</th>' +
+    '<th style="width:44px"></th></tr></thead><tbody>' +
+    pendingSpecs.map((s, i) => {
+      const loose = !s.units;
+      const n = loose ? 1 : s.units;            // 散裝用「1 顆」示範單價
+      const label = loose ? (s.pack + ' 1 顆') : (s.pack + s.units + '入');
+      return '<tr><td><b>' + esc(label) + '</b></td>' +
+        '<td style="color:#5c5c5c;font-size:13px">' + n + ' 顆 × ' + pr.unitPrice +
+          (s.fee ? ' ＋ 盒子 ' + s.fee : '') + '</td>' +
+        '<td style="text-align:right;font-size:20px;font-weight:bold;color:#c62828">' +
+          money(pr.unitPrice * n + s.fee) + '</td>' +
+        '<td><button class="btn btn-danger btn-sm" onclick="removeSpec(' + i + ')" title="刪除">×</button></td>' +
+        '</tr>';
+    }).join('') + '</tbody>';
+}
+
+function removeSpec(i) {
+  const s = pendingSpecs[i];
+  if (!s) return;
+  const label = s.units ? (s.pack + s.units + '入') : (s.pack + '（散裝）');
+  if (!confirm('要刪除「' + label + '」這個規格嗎？\n\n刪掉後新增訂單就選不到它。\n（已經開好的舊訂單不受影響）')) return;
+  pendingSpecs.splice(i, 1);
+  renderPricePreview();
+}
+
+function toggleSpecForm(show) {
+  document.getElementById('specAddForm').style.display = show ? '' : 'none';
+  document.getElementById('specAddBtn').style.display = show ? 'none' : '';
+  if (show) {
+    document.getElementById('newSpecPack').value = '';
+    document.getElementById('newSpecUnits').value = '';
+    document.getElementById('newSpecFee').value = '0';
+    document.getElementById('newSpecPack').focus();
+  }
+}
+
+function confirmAddSpec() {
+  const pack = document.getElementById('newSpecPack').value.trim();
+  const units = Number(document.getElementById('newSpecUnits').value) || 0;
+  const fee = Number(document.getElementById('newSpecFee').value) || 0;
+  if (!pack) { alert('請填包裝名稱'); document.getElementById('newSpecPack').focus(); return; }
+  if (pendingSpecs.some(s => s.pack === pack && Number(s.units) === units)) {
+    alert('「' + pack + (units ? units + '入' : '（散裝）') + '」已經在表裡了。');
+    return;
+  }
+  pendingSpecs.push({ pack: pack, units: units, fee: fee });
+  toggleSpecForm(false);
+  renderPricePreview();
 }
 
 function productRowHtml(p) {
@@ -2211,6 +2342,9 @@ function addProductRow() {
 
 async function saveProducts() {
   const pricing = readPricingInputs();
+  const specs = pendingSpecs.slice();
+  if (!specs.length) { alert('至少要留一種包裝規格，不然訂單沒有東西可以選。'); return; }
+
   const products = [];
   document.querySelectorAll('#productList tr').forEach(tr => {
     const name = tr.querySelector('.p-name').value.trim();
@@ -2219,8 +2353,12 @@ async function saveProducts() {
   });
   safeSetItem('yoshino_products', JSON.stringify(products));
   safeSetItem('yoshino_pricing', JSON.stringify(pricing));
-  if (useCloud) await db.collection('settings').doc('products').set({ list: products, pricing: pricing });
-  alert('設定已儲存！之後新增訂單就會用這組價格自動算。');
+  safeSetItem('yoshino_specs', JSON.stringify(specs));
+  renderPackHint();
+  if (useCloud) {
+    await db.collection('settings').doc('products').set({ list: products, pricing: pricing, specs: specs });
+  }
+  alert('設定已儲存！之後新增訂單的包裝與價格都會照這份走。');
 }
 
 // ===== 匯出 / 匯入 =====
@@ -2330,9 +2468,10 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v14（＝v11）';
+const APP_VERSION = 'v15';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
+renderPackHint();
 addItemRow();
 recalcTotals();
 renderOrders();
