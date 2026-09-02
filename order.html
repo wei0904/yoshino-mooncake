@@ -125,7 +125,7 @@ textarea { resize: vertical; min-height: 70px; }
 
 <div class="header">
   <h1>吉野村現烤蛋糕</h1>
-  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v18</span></div>
+  <div class="subtitle">中秋月餅預訂單 <span style="opacity:.7">v19</span></div>
 </div>
 
 <div class="container">
@@ -156,7 +156,7 @@ textarea { resize: vertical; min-height: 70px; }
           <input type="date" id="pickupDate">
         </div>
         <div class="field">
-          <label>取貨時間</label>
+          <label>取貨時間 <span class="req">*</span></label>
           <input type="time" id="pickupTime" step="300" min="07:00" max="18:00">
           <div class="hint">營業時間 07:00–18:00</div>
         </div>
@@ -569,6 +569,7 @@ async function submitOrder() {
   if (!phone) { showError('請填寫聯絡電話'); return; }
   if (phone.length !== 10) { showError('電話要 10 碼數字，目前是 ' + phone.length + ' 碼。'); return; }
   if (!pickupDate) { showError('請選擇取貨日期'); return; }
+  if (!pickupTime) { showError('請選擇取貨時間'); return; }
   if (pickupTimeOutOfRange(pickupTime)) {
     showError('取貨時間 ' + pickupTime + ' 不在營業時間內，請改成 ' + PICKUP_START + ' 到 ' + PICKUP_END + ' 之間。');
     return;
