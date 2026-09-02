@@ -13,11 +13,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 只有這些信箱登入後才算「店家」。可以填多個，用逗號分隔。
+    // ⚠️ 這裡的信箱必須跟你在 Authentication → Users 建立的帳號完全一樣，
+    //    填錯會導致你自己也登不進去。要多人共用可以再加一行，用逗號分隔。
     function isShop() {
       return request.auth != null
         && request.auth.token.email in [
-          'SHOP_EMAIL_HERE@example.com'
+          'claudeallpass@gmail.com'
         ];
     }
 
