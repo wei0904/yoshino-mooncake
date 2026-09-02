@@ -154,7 +154,7 @@ textarea { resize: vertical; min-height: 70px; }
         </div>
         <div class="field">
           <label>取貨時間</label>
-          <select id="pickupTime"></select>
+          <input type="time" id="pickupTime" step="300" min="07:00" max="18:00">
           <div class="hint">營業時間 07:00–18:00</div>
         </div>
       </div>
@@ -212,18 +212,15 @@ const GIFT_UNITS = [6, 9, 10, 12, 15];
 const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
 const PACKS = ['禮盒', '塑膠盒', '散裝'];
 
-// 取貨時段：早上 7 點到下午 6 點，每半小時一個
-const PICKUP_START_HOUR = 7;
-const PICKUP_END_HOUR = 18;
-const PICKUP_STEP_MIN = 30;
+// 營業時段：早上 7 點到下午 6 點。時間可以自由填，但超出範圍不給送出。
+const PICKUP_START = '07:00';
+const PICKUP_END = '18:00';
 
-function fillPickupTimes() {
-  const out = ['<option value="">-- 選時間 --</option>'];
-  for (let m = PICKUP_START_HOUR * 60; m <= PICKUP_END_HOUR * 60; m += PICKUP_STEP_MIN) {
-    const t = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-    out.push('<option value="' + t + '">' + t + '</option>');
-  }
-  document.getElementById('pickupTime').innerHTML = out.join('');
+// 沒填代表還沒決定，允許；有填就必須落在營業時間內。
+// HH:MM 都是零開頭的固定格式，直接字串比較就是正確的時間順序。
+function pickupTimeOutOfRange(t) {
+  if (!t) return false;
+  return t < PICKUP_START || t > PICKUP_END;
 }
 
 let db = null;
@@ -250,7 +247,6 @@ db.collection('settings').doc('products').get()
   .then(() => {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form').style.display = '';
-    fillPickupTimes();
     addItem();
   });
 
@@ -506,6 +502,10 @@ async function submitOrder() {
   if (!customer) { showError('請填寫姓名'); return; }
   if (!phone) { showError('請填寫聯絡電話'); return; }
   if (!pickupDate) { showError('請選擇取貨日期'); return; }
+  if (pickupTimeOutOfRange(pickupTime)) {
+    showError('取貨時間 ' + pickupTime + ' 不在營業時間內，請改成 ' + PICKUP_START + ' 到 ' + PICKUP_END + ' 之間。');
+    return;
+  }
   if (!items.length) { showError('請至少訂購一項，並選好口味和盒數'); return; }
   const bad = unbalanced();
   if (bad.length) { showError('口味顆數要跟盒子的入數一樣：\n' + bad.join('\n')); return; }
