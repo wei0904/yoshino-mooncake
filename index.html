@@ -355,6 +355,28 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   display: block; text-align: center; margin-top: 14px;
   font-size: 12px; color: #8a7563; text-decoration: underline; cursor: pointer;
 }
+.btn-guest {
+  width: 100%; padding: 16px; border: none; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(135deg, #8B4513, #D2691E); color: #fff;
+  font-size: 17px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+}
+.btn-shop-toggle {
+  width: 100%; padding: 13px; border: 1px solid #ddd0c0 !important; border-radius: 10px;
+  background: #fff; color: #6d4c35; font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.gate-or {
+  text-align: center; margin: 16px 0; position: relative;
+}
+.gate-or::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid #eee2d2;
+}
+.gate-or span {
+  position: relative; background: #fff; padding: 0 12px;
+  font-size: 12px; color: #a89684;
+}
+.gate-hint { text-align: center; font-size: 12px; color: #8a7563; margin-top: 10px; }
 
 /* ===== 待確認訂單 ===== */
 .sub-card {
@@ -418,15 +440,28 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 </head>
 <body>
 
-<div id="loginGate">
+<div id="loginGate" class="show">
   <div class="login-box">
     <h2>吉野村現烤蛋糕</h2>
-    <div class="sub">月餅訂單管理系統</div>
-    <div class="login-err" id="loginErr"></div>
-    <input type="email" id="loginEmail" placeholder="帳號（電子郵件）" autocomplete="username">
-    <input type="password" id="loginPass" placeholder="密碼" autocomplete="current-password">
-    <button id="loginBtn" onclick="doLogin()">登入</button>
-    <span class="login-skip" onclick="skipLogin()">還沒設定登入？先直接使用</span>
+    <div class="sub">中秋月餅預訂</div>
+
+    <!-- 客人：直接去填訂購單 -->
+    <div id="gateChoice">
+      <button class="btn-guest" onclick="goCustomer()">🥮　我要訂購月餅</button>
+      <div class="gate-or"><span>或</span></div>
+      <button class="btn-shop-toggle" onclick="showShopLogin()">🔑　店家登入</button>
+    </div>
+
+    <!-- 店家：帳號密碼 -->
+    <div id="gateShop" style="display:none">
+      <div class="login-err" id="loginErr"></div>
+      <input type="email" id="loginEmail" placeholder="帳號（電子郵件）" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="密碼" autocomplete="current-password">
+      <button id="loginBtn" onclick="doLogin()">登入</button>
+      <div class="gate-hint">登入一次就好，這台裝置會記住</div>
+      <span class="login-skip" onclick="backToChoice()">← 返回</span>
+      <span class="login-skip" onclick="skipLogin()">還沒設定登入？先直接使用</span>
+    </div>
   </div>
 </div>
 
@@ -531,8 +566,11 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 <div id="section-inbox" class="section">
 <div class="container">
   <div class="link-box">
-    給客人填的網址：<b id="customerLink"></b><br>
-    <span style="font-size:12px;opacity:0.8">客人填完送出後會出現在下面，你確認過再按「接受」，才會變成正式訂單。</span>
+    給客人的網址：<b id="customerLink"></b><br>
+    <span style="font-size:12px;opacity:0.8">
+      客人開這個網址會看到「我要訂購月餅」，按下去就能填單。<br>
+      送出後會出現在下面，你確認過再按「接受」，才會變成正式訂單。
+    </span>
     <div style="margin-top:8px">
       <button class="btn" style="padding:7px 12px;font-size:13px;background:#8B4513;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="copyCustomerLink()">複製網址</button>
     </div>
@@ -726,6 +764,7 @@ function bootCloud() {
     db = null;
     cloudError = (e && (e.code || e.message)) || String(e);
     setCloudStatus('err', '⚠ 本機模式（點我）');
+    hideLoginGate();   // Firebase 整個掛掉時不要把使用者鎖在登入畫面
     loadLocal();
   }
 }
@@ -873,7 +912,8 @@ let loginSkipped = false;
 
 function initAuth() {
   try { auth = firebase.auth(); } catch (e) { auth = null; }
-  if (!auth) { startCloudSync(); return; }   // 沒載到 auth 就照舊運作，不擋人
+  // 沒載到 auth（例如網路擋掉那支 SDK）就照舊運作，不能把人關在門外
+  if (!auth) { hideLoginGate(); startCloudSync(); return; }
   // 記住上次選了「先直接使用」，設定還沒做完之前不用每次都被擋
   try { loginSkipped = localStorage.getItem('yoshino_skip_login') === '1'; } catch (e) {}
   auth.onAuthStateChanged(user => {
@@ -893,6 +933,21 @@ function initAuth() {
 
 function showLoginGate() { document.getElementById('loginGate').classList.add('show'); }
 function hideLoginGate() { document.getElementById('loginGate').classList.remove('show'); }
+
+// 客人走這條：直接跳到訂購表單
+function goCustomer() { location.href = customerLink(); }
+
+function showShopLogin() {
+  document.getElementById('gateChoice').style.display = 'none';
+  document.getElementById('gateShop').style.display = '';
+  document.getElementById('loginEmail').focus();
+}
+
+function backToChoice() {
+  document.getElementById('gateShop').style.display = 'none';
+  document.getElementById('gateChoice').style.display = '';
+  document.getElementById('loginErr').style.display = 'none';
+}
 
 // 還沒在 Firebase 建好帳號時的逃生門。規則收緊後這條路會被伺服器擋下來，
 // 所以留著它不會削弱安全性，只是避免設定到一半把自己鎖在外面。
@@ -941,17 +996,23 @@ function doLogout() {
 let submissionsCache = [];
 let submissionsUnsub = null;
 
-function customerLink() {
-  return location.origin + location.pathname.replace(/[^/]*$/, '') + 'order.html';
+function baseLink() {
+  return location.origin + location.pathname.replace(/[^/]*$/, '');
 }
+
+// 客人按「我要訂購月餅」時實際跳到的表單
+function customerLink() { return baseLink() + 'order.html'; }
+
+// 發給客人的網址用首頁就好，他們會先看到「我要訂購／店家登入」的選擇畫面
+function shareLink() { return baseLink(); }
 
 function setCustomerLink() {
   const el = document.getElementById('customerLink');
-  if (el) el.textContent = customerLink();
+  if (el) el.textContent = shareLink();
 }
 
 function copyCustomerLink() {
-  const url = customerLink();
+  const url = shareLink();
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url)
       .then(() => alert('已複製：\n' + url))
