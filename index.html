@@ -502,6 +502,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
   <div style="text-align:right">
     <div id="headerStats" style="font-size:13px;opacity:0.9"></div>
     <div id="cloudStatus" class="cloud-status cloud-loading">連線中...</div>
+    <div id="authStatus" style="font-size:11px;opacity:0.9;margin-top:3px"></div>
   </div>
 </div>
 
@@ -1065,6 +1066,7 @@ function initAuth() {
   try { loginSkipped = localStorage.getItem('yoshino_skip_login') === '1'; } catch (e) {}
   auth.onAuthStateChanged(user => {
     shopUser = user;
+    renderAuthStatus();
     if (user) {
       hideLoginGate();
       try { localStorage.removeItem('yoshino_skip_login'); } catch (e) {}
@@ -1076,6 +1078,21 @@ function initAuth() {
       showLoginGate();
     }
   });
+}
+
+// 把登入狀態直接寫在標題旁邊，不用點開對話框才知道自己有沒有登入
+function renderAuthStatus() {
+  const el = document.getElementById('authStatus');
+  if (!el) return;
+  if (shopUser) {
+    el.textContent = '👤 ' + shopUser.email;
+    el.style.color = '#a5d6a7';
+  } else {
+    el.textContent = '👤 未登入（點我登入）';
+    el.style.color = '#ffcdd2';
+    el.style.cursor = 'pointer';
+    el.onclick = showLoginScreen;
+  }
 }
 
 function showLoginGate() { document.getElementById('loginGate').classList.add('show'); }
@@ -2630,7 +2647,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 // 版本號顯示在標題旁邊，用來確認手機拿到的是不是最新版（每次改版要跟 sw.js 一起 +1）
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 renderPackHint();
