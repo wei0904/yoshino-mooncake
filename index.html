@@ -323,6 +323,66 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 .cloud-ok { background: rgba(255,255,255,0.2); color: #a5d6a7; }
 .cloud-err { background: rgba(255,255,255,0.15); color: #ffcdd2; }
 .cloud-wait { background: rgba(255,255,255,0.15); color: #ffe082; }
+
+/* ===== 登入畫面 ===== */
+#loginGate {
+  position: fixed; inset: 0; z-index: 9999; display: none;
+  background: linear-gradient(135deg, #8B4513, #D2691E);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#loginGate.show { display: flex; }
+.login-box {
+  background: #fff; border-radius: 14px; padding: 26px 22px;
+  width: 100%; max-width: 340px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+.login-box h2 { font-size: 18px; color: #8B4513; margin-bottom: 4px; }
+.login-box .sub { font-size: 13px; color: #8a7563; margin-bottom: 18px; }
+.login-box input {
+  width: 100%; padding: 11px 12px; margin-bottom: 10px; font-size: 16px;
+  border: 1px solid #ddd0c0; border-radius: 8px; font-family: inherit;
+}
+.login-box button {
+  width: 100%; padding: 13px; border: none; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(135deg, #8B4513, #D2691E); color: #fff;
+  font-size: 16px; font-weight: 600; font-family: inherit;
+}
+.login-box button:disabled { opacity: 0.6; }
+.login-err {
+  background: #ffebee; color: #c62828; padding: 10px 12px;
+  border-radius: 6px; font-size: 13px; margin-bottom: 12px; display: none;
+}
+.login-skip {
+  display: block; text-align: center; margin-top: 14px;
+  font-size: 12px; color: #8a7563; text-decoration: underline; cursor: pointer;
+}
+
+/* ===== 待確認訂單 ===== */
+.sub-card {
+  background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 12px;
+  border-left: 4px solid #D2691E; box-shadow: 0 2px 6px rgba(139,69,19,0.08);
+}
+.sub-card .who { font-size: 16px; font-weight: 700; color: #6d3a1a; }
+.sub-card .meta { font-size: 13px; color: #8a7563; margin-top: 2px; }
+.sub-card .lines { font-size: 14px; margin: 10px 0; line-height: 1.8; }
+.sub-card .note {
+  background: #fff8ec; border-radius: 6px; padding: 8px 10px;
+  font-size: 13px; color: #6d4c35; margin: 8px 0;
+}
+.sub-card .amt { font-size: 17px; font-weight: 800; color: #8B4513; }
+.sub-actions { display: flex; gap: 8px; margin-top: 12px; }
+.sub-actions button {
+  flex: 1; padding: 11px; border: none; border-radius: 8px;
+  font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.btn-accept { background: #2e7d32; color: #fff; }
+.btn-reject { background: #fff; color: #c62828; border: 1px solid #ffcdd2 !important; }
+.empty-hint { text-align: center; color: #8a7563; padding: 40px 20px; font-size: 14px; }
+.link-box {
+  background: #fff8ec; border: 1px dashed #D2691E; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #6d4c35;
+  word-break: break-all;
+}
+.link-box b { color: #8B4513; }
 .cloud-loading { background: rgba(255,255,255,0.15); color: #ffe0b2; }
 
 .progress-bar { background: #e0d6cc; border-radius: 10px; height: 12px; overflow: hidden; margin: 8px 0; }
@@ -358,6 +418,18 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 </head>
 <body>
 
+<div id="loginGate">
+  <div class="login-box">
+    <h2>吉野村現烤蛋糕</h2>
+    <div class="sub">月餅訂單管理系統</div>
+    <div class="login-err" id="loginErr"></div>
+    <input type="email" id="loginEmail" placeholder="帳號（電子郵件）" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="密碼" autocomplete="current-password">
+    <button id="loginBtn" onclick="doLogin()">登入</button>
+    <span class="login-skip" onclick="skipLogin()">還沒設定登入？先直接使用</span>
+  </div>
+</div>
+
 <div class="header">
   <div>
     <h1>吉野村現烤蛋糕</h1>
@@ -371,6 +443,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 
 <div class="tabs" id="tabBar">
   <button class="tab active" onclick="switchTab('new', this)">新增訂單</button>
+  <button class="tab" onclick="switchTab('inbox', this)">待確認<span class="tab-badge" id="inboxBadge" style="display:none"></span></button>
   <button class="tab" onclick="switchTab('orders', this)">訂單列表<span class="tab-badge" id="ordersBadge" style="display:none"></span></button>
   <button class="tab" onclick="switchTab('stats', this)">生產統計</button>
   <button class="tab" onclick="switchTab('packing', this)">包裝清單<span class="tab-badge" id="packingBadge" style="display:none"></span></button>
@@ -451,6 +524,20 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
       <button class="btn btn-primary" id="saveBtn" onclick="saveOrder()">儲存訂單</button>
     </div>
   </div>
+</div>
+</div>
+
+<!-- ===== 待確認（客人自己送來的單） ===== -->
+<div id="section-inbox" class="section">
+<div class="container">
+  <div class="link-box">
+    給客人填的網址：<b id="customerLink"></b><br>
+    <span style="font-size:12px;opacity:0.8">客人填完送出後會出現在下面，你確認過再按「接受」，才會變成正式訂單。</span>
+    <div style="margin-top:8px">
+      <button class="btn" style="padding:7px 12px;font-size:13px;background:#8B4513;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="copyCustomerLink()">複製網址</button>
+    </div>
+  </div>
+  <div id="inboxList"></div>
 </div>
 </div>
 
@@ -580,6 +667,7 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
@@ -627,7 +715,8 @@ function bootCloud() {
     // 離線快取：手機收訊不好時照樣能看、能開單，恢復連線後自動補送到雲端
     db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
     loadLocal();          // 先用上次的資料把畫面畫出來，不必等連線
-    startCloudSync();
+    setCustomerLink();
+    initAuth();           // 登入成功（或選擇跳過）之後才會 startCloudSync()
     // 手機切換 wifi／行動網路、或從背景切回來時，重新確認連線
     window.addEventListener('online', () => { if (!useCloud) startCloudSync(); });
     document.addEventListener('visibilitychange', () => {
@@ -676,6 +765,8 @@ function startCloudSync() {
       if (d.pricing) safeSetItem('yoshino_pricing', JSON.stringify(d.pricing));
       if (document.querySelector('#section-settings').classList.contains('active')) renderProductSettings();
     }, onCloudError);
+
+  startInboxSync();
 }
 
 function onCloudConnected() {
@@ -717,7 +808,12 @@ function setCloudStatus(type, text) {
 
 function showCloudInfo() {
   if (useCloud) {
-    alert('☁ 雲端連線正常\n\n訂單會即時同步到所有裝置。\n在別台手機或電腦打開同一個網址，就會看到同一批訂單，\n而且對方一存檔，你這邊的畫面會自己更新，不用重新整理。');
+    const info = '☁ 雲端連線正常\n\n訂單會即時同步到所有裝置。\n在別台手機或電腦打開同一個網址，就會看到同一批訂單，\n而且對方一存檔，你這邊的畫面會自己更新，不用重新整理。';
+    if (shopUser) {
+      if (confirm(info + '\n\n目前登入：' + shopUser.email + '\n\n要登出嗎？')) doLogout();
+    } else {
+      alert(info + '\n\n（目前未登入）');
+    }
     return;
   }
   alert('⚠ 目前是本機模式：訂單只存在這台裝置，其他手機／電腦看不到。\n\n' +
@@ -767,6 +863,190 @@ function reportWriteError(err) {
 function cloudSaveOrder(order) { return cloudWrite(() => db.collection('orders').doc(order.id).set(order)); }
 function cloudDeleteOrder(id) { return cloudWrite(() => db.collection('orders').doc(id).delete()); }
 function cloudUpdateOrder(id, data) { return cloudWrite(() => db.collection('orders').doc(id).update(data)); }
+
+// ===========================================
+// ===== 店家登入 =====
+// ===========================================
+let auth = null;
+let shopUser = null;
+let loginSkipped = false;
+
+function initAuth() {
+  try { auth = firebase.auth(); } catch (e) { auth = null; }
+  if (!auth) { startCloudSync(); return; }   // 沒載到 auth 就照舊運作，不擋人
+  // 記住上次選了「先直接使用」，設定還沒做完之前不用每次都被擋
+  try { loginSkipped = localStorage.getItem('yoshino_skip_login') === '1'; } catch (e) {}
+  auth.onAuthStateChanged(user => {
+    shopUser = user;
+    if (user) {
+      hideLoginGate();
+      try { localStorage.removeItem('yoshino_skip_login'); } catch (e) {}
+      startCloudSync();
+    } else if (loginSkipped) {
+      hideLoginGate();
+      startCloudSync();
+    } else {
+      showLoginGate();
+    }
+  });
+}
+
+function showLoginGate() { document.getElementById('loginGate').classList.add('show'); }
+function hideLoginGate() { document.getElementById('loginGate').classList.remove('show'); }
+
+// 還沒在 Firebase 建好帳號時的逃生門。規則收緊後這條路會被伺服器擋下來，
+// 所以留著它不會削弱安全性，只是避免設定到一半把自己鎖在外面。
+function skipLogin() {
+  loginSkipped = true;
+  try { localStorage.setItem('yoshino_skip_login', '1'); } catch (e) {}
+  hideLoginGate();
+  startCloudSync();
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  if (!email || !pass) { err.textContent = '請輸入帳號和密碼'; err.style.display = ''; return; }
+
+  btn.disabled = true; btn.textContent = '登入中…';
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);  // 記住登入，不用每次輸入
+    await auth.signInWithEmailAndPassword(email, pass);
+    document.getElementById('loginPass').value = '';
+  } catch (e) {
+    const code = String((e && e.code) || e);
+    let msg = '登入失敗：' + code;
+    if (code.indexOf('wrong-password') !== -1 || code.indexOf('invalid-credential') !== -1) msg = '密碼不對';
+    else if (code.indexOf('user-not-found') !== -1) msg = '查無此帳號';
+    else if (code.indexOf('invalid-email') !== -1) msg = '信箱格式不對';
+    else if (code.indexOf('operation-not-allowed') !== -1) msg = '還沒在 Firebase 開啟「電子郵件/密碼」登入方式';
+    else if (code.indexOf('too-many-requests') !== -1) msg = '嘗試太多次，請等幾分鐘再試';
+    err.textContent = msg; err.style.display = '';
+  } finally {
+    btn.disabled = false; btn.textContent = '登入';
+  }
+}
+
+function doLogout() {
+  if (!auth) return;
+  auth.signOut().then(() => location.reload());
+}
+
+// ===========================================
+// ===== 待確認：客人自己送來的單 =====
+// ===========================================
+let submissionsCache = [];
+let submissionsUnsub = null;
+
+function customerLink() {
+  return location.origin + location.pathname.replace(/[^/]*$/, '') + 'order.html';
+}
+
+function setCustomerLink() {
+  const el = document.getElementById('customerLink');
+  if (el) el.textContent = customerLink();
+}
+
+function copyCustomerLink() {
+  const url = customerLink();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url)
+      .then(() => alert('已複製：\n' + url))
+      .catch(() => prompt('複製這個網址給客人：', url));
+  } else {
+    prompt('複製這個網址給客人：', url);
+  }
+}
+
+function startInboxSync() {
+  if (!db) return;
+  if (submissionsUnsub) { submissionsUnsub(); submissionsUnsub = null; }
+  submissionsUnsub = db.collection('submissions').orderBy('createdAt', 'desc')
+    .onSnapshot(snapshot => {
+      submissionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderInbox();
+      updateInboxBadge();
+    }, err => {
+      // 客人送單區讀不到不該影響主系統，只記錄就好
+      console.warn('待確認清單讀取失敗：' + ((err && err.code) || err));
+      submissionsCache = [];
+      renderInbox();
+      updateInboxBadge();
+    });
+}
+
+function updateInboxBadge() {
+  const badge = document.getElementById('inboxBadge');
+  if (!badge) return;
+  if (submissionsCache.length) { badge.style.display = ''; badge.textContent = submissionsCache.length; }
+  else badge.style.display = 'none';
+}
+
+function renderInbox() {
+  const box = document.getElementById('inboxList');
+  if (!box) return;
+  if (!submissionsCache.length) {
+    box.innerHTML = '<div class="empty-hint">目前沒有待確認的訂單。<br>客人從上面那個網址送出後會出現在這裡。</div>';
+    return;
+  }
+  box.innerHTML = submissionsCache.map(s => {
+    const lines = (s.items || []).map(i => '・' + esc(itemLabel(i)) + '　' + money(i.subtotal || 0)).join('<br>');
+    const when = s.createdAt ? String(s.createdAt).slice(0, 16).replace('T', ' ') : '';
+    return '<div class="sub-card">' +
+      '<div class="who">' + esc(s.customer || '') + '</div>' +
+      '<div class="meta">' + esc(s.phone || '') + '　｜　取貨 ' +
+        esc(formatDate(s.pickupDate)) + (s.pickupTime ? ' ' + esc(s.pickupTime) : '') + '</div>' +
+      '<div class="meta">送出時間 ' + esc(when) + '</div>' +
+      '<div class="lines">' + lines + '</div>' +
+      (s.note ? '<div class="note">備註：' + esc(s.note) + '</div>' : '') +
+      '<div class="amt">預估 ' + money(s.total || 0) + '</div>' +
+      '<div class="sub-actions">' +
+        '<button class="btn-accept" onclick="acceptSubmission(\'' + esc(s.id) + '\')">接受，建立訂單</button>' +
+        '<button class="btn-reject" onclick="rejectSubmission(\'' + esc(s.id) + '\')">退回</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function acceptSubmission(id) {
+  const s = submissionsCache.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm('把「' + (s.customer || '') + '」這筆變成正式訂單嗎？')) return;
+
+  const orderId = 'ORD-' + Date.now().toString(36).toUpperCase();
+  const pickup = s.pickupDate || '';
+  const sameDay = ordersCache.filter(o => (o.pickupDate || '') === pickup);
+  const orderNo = (pickup ? pickup.slice(5, 7) + pickup.slice(8, 10) : '未定') +
+    '-' + String(sameDay.length + 1).padStart(2, '0');
+
+  const order = {
+    id: orderId, orderNo: orderNo,
+    customer: s.customer || '', phone: s.phone || '',
+    pickupDate: pickup, pickupTime: s.pickupTime || '',
+    note: s.note || '', items: s.items || [],
+    total: Number(s.total) || 0, deposit: 0, photos: [],
+    status: 'pending', createdAt: new Date().toISOString()
+  };
+
+  try {
+    await db.collection('orders').doc(orderId).set(order);
+    await db.collection('submissions').doc(id).delete();
+    alert('已建立訂單 ' + orderNo + '，可以到「訂單列表」查看。');
+  } catch (e) {
+    alert('建立失敗：' + ((e && e.message) || e));
+  }
+}
+
+async function rejectSubmission(id) {
+  const s = submissionsCache.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm('要退回並刪除「' + (s.customer || '') + '」這筆嗎？\n此操作無法復原。')) return;
+  try { await db.collection('submissions').doc(id).delete(); }
+  catch (e) { alert('刪除失敗：' + ((e && e.message) || e)); }
+}
 
 // ===== 常數 =====
 const GIFT_UNITS = [6, 9, 10, 12, 15];
@@ -838,11 +1118,12 @@ function switchTab(tab, btn) {
   if (tab === 'packing') renderPacking();
   if (tab === 'settings') renderProductSettings();
   if (tab === 'orders') { renderOrders(); updatePickupFilter(); }
+  if (tab === 'inbox') { setCustomerLink(); renderInbox(); }
 }
 
 // 用分頁名稱切換（程式內部用）
 function gotoTab(tab) {
-  const label = { 'new': '新增訂單', orders: '訂單列表', stats: '生產統計', packing: '包裝清單', settings: '產品設定' }[tab];
+  const label = { 'new': '新增訂單', inbox: '待確認', orders: '訂單列表', stats: '生產統計', packing: '包裝清單', settings: '產品設定' }[tab];
   const btn = Array.from(document.querySelectorAll('#tabBar .tab'))
     .find(t => t.textContent.indexOf(label) !== -1);
   switchTab(tab, btn);

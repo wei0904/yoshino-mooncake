@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>吉野村現烤蛋糕 — 月餅預訂</title>
+<link rel="icon" href="icon-192.png">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+  background: #faf6f0; color: #3d2b1f; line-height: 1.6; padding-bottom: 40px;
+}
+.header {
+  background: linear-gradient(135deg, #8B4513, #D2691E);
+  color: #fff; padding: 22px 20px; text-align: center;
+}
+.header h1 { font-size: 20px; letter-spacing: 1px; }
+.header .subtitle { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+.container { max-width: 640px; margin: 0 auto; padding: 16px; }
+.card {
+  background: #fff; border-radius: 12px; padding: 18px;
+  box-shadow: 0 2px 8px rgba(139,69,19,0.08); margin-bottom: 16px;
+}
+.card h2 {
+  font-size: 15px; color: #8B4513; margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 2px solid #f0e4d4;
+}
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #6d4c35; }
+label .req { color: #c62828; }
+input, select, textarea {
+  width: 100%; padding: 11px 12px; border: 1px solid #ddd0c0; border-radius: 8px;
+  font-size: 16px; font-family: inherit; background: #fff; color: #3d2b1f;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: #D2691E; }
+textarea { resize: vertical; min-height: 70px; }
+.field { margin-bottom: 14px; }
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; min-width: 0; }
+.hint { font-size: 12px; color: #8a7563; margin-top: 4px; }
+
+.item-card {
+  border: 1px solid #e8d9c5; border-radius: 10px; padding: 14px;
+  margin-bottom: 12px; background: #fffdfa; position: relative;
+}
+.item-card-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.item-no { font-size: 13px; font-weight: 700; color: #8B4513; }
+.btn-x {
+  background: none; border: none; color: #c62828; font-size: 20px;
+  cursor: pointer; padding: 0 6px; line-height: 1;
+}
+.item-sub {
+  text-align: right; font-size: 14px; font-weight: 700;
+  color: #8B4513; margin-top: 10px;
+}
+.btn {
+  padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px;
+  font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.btn-add {
+  width: 100%; background: #fff; color: #8B4513;
+  border: 2px dashed #D2691E; margin-bottom: 8px;
+}
+.btn-primary {
+  width: 100%; background: linear-gradient(135deg, #8B4513, #D2691E);
+  color: #fff; font-size: 17px; padding: 15px;
+}
+.btn-primary:disabled { opacity: 0.55; }
+.total-bar {
+  background: #fff5e9; border: 1px solid #f0d9bd; border-radius: 10px;
+  padding: 14px 16px; display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 16px;
+}
+.total-bar .label { font-size: 14px; color: #6d4c35; }
+.total-bar .amount { font-size: 24px; font-weight: 800; color: #8B4513; }
+.total-bar .pieces { font-size: 12px; color: #8a7563; }
+.note-box {
+  background: #fff8ec; border-left: 4px solid #D2691E;
+  padding: 12px 14px; border-radius: 6px; font-size: 13px; color: #6d4c35;
+  margin-bottom: 16px;
+}
+.done {
+  text-align: center; padding: 40px 20px;
+}
+.done .tick { font-size: 56px; }
+.done h2 { font-size: 20px; color: #8B4513; margin: 12px 0 8px; border: none; }
+.done p { font-size: 14px; color: #6d4c35; }
+.done .order-box {
+  background: #fff5e9; border-radius: 10px; padding: 16px;
+  margin: 18px 0; text-align: left; font-size: 14px;
+}
+.err {
+  background: #ffebee; color: #c62828; padding: 12px 14px;
+  border-radius: 8px; font-size: 14px; margin-bottom: 14px;
+}
+.loading { text-align: center; padding: 40px; color: #8a7563; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>吉野村現烤蛋糕</h1>
+  <div class="subtitle">中秋月餅預訂單</div>
+</div>
+
+<div class="container">
+  <div id="loading" class="loading">載入中…</div>
+
+  <div id="form" style="display:none">
+    <div class="note-box">
+      填好送出後，我們會與您聯繫確認訂單與金額。<br>
+      金額為系統試算，實際以店家確認為準。
+    </div>
+
+    <div id="errBox"></div>
+
+    <div class="card">
+      <h2>訂購人資料</h2>
+      <div class="field">
+        <label>姓名 <span class="req">*</span></label>
+        <input type="text" id="customer" placeholder="請輸入姓名" maxlength="40">
+      </div>
+      <div class="field">
+        <label>聯絡電話 <span class="req">*</span></label>
+        <input type="tel" id="phone" placeholder="09xxxxxxxx" maxlength="25">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>取貨日期 <span class="req">*</span></label>
+          <input type="date" id="pickupDate">
+        </div>
+        <div class="field">
+          <label>取貨時間</label>
+          <input type="time" id="pickupTime">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>訂購內容</h2>
+      <div id="items"></div>
+      <button class="btn btn-add" onclick="addItem()">＋ 再加一項</button>
+    </div>
+
+    <div class="total-bar">
+      <div>
+        <div class="label">預估金額</div>
+        <div class="pieces" id="pieces">共 0 顆</div>
+      </div>
+      <div class="amount" id="total">$0</div>
+    </div>
+
+    <div class="card">
+      <h2>備註</h2>
+      <textarea id="note" placeholder="有其他需求請寫在這裡，例如指定口味比例、送禮包裝等" maxlength="500"></textarea>
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()">送出預訂單</button>
+  </div>
+
+  <div id="done" style="display:none"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDBpASdM7q4vI7miLtplgDtWMPbkzHhKnw",
+  authDomain: "yoshino-mooncake.firebaseapp.com",
+  projectId: "yoshino-mooncake",
+  storageBucket: "yoshino-mooncake.firebasestorage.app",
+  messagingSenderId: "1071837132002",
+  appId: "1:1071837132002:web:4514cddb8852ef2c95dabb"
+};
+
+// 跟店家系統同一套預設值，讀不到雲端設定時才會用到
+const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, loose: 0 };
+const DEFAULT_PRODUCTS = [
+  { name: '蛋黃酥' }, { name: '鹹蛋黃酥' }, { name: '綠豆椪' },
+  { name: '芋頭酥' }, { name: '金月亮' },
+];
+const GIFT_UNITS = [6, 9, 10, 12, 15];
+const LOOSE_UNITS = [6];
+
+let db = null;
+let products = DEFAULT_PRODUCTS;
+let pricing = DEFAULT_PRICING;
+
+firebase.initializeApp(firebaseConfig);
+db = firebase.firestore();
+
+// 先把店家設定的口味和價格讀進來，讀不到就用預設值，不擋客人下單
+db.collection('settings').doc('products').get()
+  .then(doc => {
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.list && d.list.length) products = d.list;
+      if (d.pricing) pricing = Object.assign({}, DEFAULT_PRICING, d.pricing);
+    }
+  })
+  .catch(() => {})
+  .then(() => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form').style.display = '';
+    addItem();
+  });
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function money(n) { return '$' + (Number(n) || 0).toLocaleString(); }
+
+// 盒子加價：禮盒 6 入一種價，其他入數另一種價，散裝不加
+function boxFee(pack, units) {
+  if (pack === '散裝') return Number(pricing.loose) || 0;
+  return Number(units) === 6
+    ? (Number(pricing.giftSix) || 0)
+    : (Number(pricing.giftOther) || 0);
+}
+
+// 一盒多少錢＝該口味單價 × 顆數 ＋ 盒子加價（跟店家系統同一套算法）
+function calcBoxPrice(pack, units, flavor) {
+  const prod = products.find(p => p.name === flavor);
+  const unitPrice = (prod && Number(prod.price) > 0)
+    ? Number(prod.price)
+    : (Number(pricing.unitPrice) || 0);
+  return unitPrice * (Number(units) || 0) + boxFee(pack, units);
+}
+
+let itemSeq = 0;
+
+function addItem() {
+  itemSeq++;
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.innerHTML =
+    '<div class="item-card-head">' +
+      '<span class="item-no"></span>' +
+      '<button class="btn-x" onclick="removeItem(this)" title="刪除">×</button>' +
+    '</div>' +
+    '<div class="field">' +
+      '<label>口味</label>' +
+      '<select class="flavor" onchange="recalc()">' +
+        products.map(p => '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('') +
+      '</select>' +
+    '</div>' +
+    '<div class="row">' +
+      '<div class="field">' +
+        '<label>包裝</label>' +
+        '<select class="pack" onchange="onPackChange(this)">' +
+          '<option value="禮盒">禮盒</option>' +
+          '<option value="散裝">散裝</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>幾入</label>' +
+        '<select class="units" onchange="recalc()"></select>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>幾盒</label>' +
+        '<input type="number" class="boxes" value="1" min="1" max="999" oninput="recalc()">' +
+      '</div>' +
+    '</div>' +
+    '<div class="item-sub"></div>';
+  document.getElementById('items').appendChild(div);
+  fillUnits(div);
+  renumber();
+  recalc();
+}
+
+function removeItem(btn) {
+  const items = document.getElementById('items');
+  if (items.children.length <= 1) { alert('至少要有一項'); return; }
+  btn.closest('.item-card').remove();
+  renumber();
+  recalc();
+}
+
+function renumber() {
+  document.querySelectorAll('#items .item-card').forEach((d, i) => {
+    d.querySelector('.item-no').textContent = '第 ' + (i + 1) + ' 項';
+    d.querySelector('.btn-x').style.visibility =
+      document.querySelectorAll('#items .item-card').length > 1 ? '' : 'hidden';
+  });
+}
+
+function onPackChange(sel) {
+  fillUnits(sel.closest('.item-card'));
+  recalc();
+}
+
+function fillUnits(div) {
+  const pack = div.querySelector('.pack').value;
+  const list = pack === '散裝' ? LOOSE_UNITS : GIFT_UNITS;
+  const sel = div.querySelector('.units');
+  const prev = sel.value;
+  sel.innerHTML = list.map(u => '<option value="' + u + '">' + u + ' 入</option>').join('');
+  if (list.indexOf(Number(prev)) !== -1) sel.value = prev;
+}
+
+function readItem(div) {
+  const flavor = div.querySelector('.flavor').value;
+  const pack = div.querySelector('.pack').value;
+  const unitsPerBox = parseInt(div.querySelector('.units').value) || 0;
+  const boxes = parseInt(div.querySelector('.boxes').value) || 0;
+  const boxPrice = calcBoxPrice(pack, unitsPerBox, flavor);
+  return {
+    pack: pack,
+    unitsPerBox: unitsPerBox,
+    boxes: boxes,
+    boxPrice: boxPrice,
+    // 一盒裝滿同一種口味，格式跟店家系統的品項一致，接受後可直接沿用
+    fillings: [{ name: flavor, per: unitsPerBox }],
+    filled: unitsPerBox,
+    qty: unitsPerBox * boxes,
+    subtotal: boxPrice * boxes,
+    name: flavor
+  };
+}
+
+function readAllItems() {
+  return Array.from(document.querySelectorAll('#items .item-card'))
+    .map(readItem)
+    .filter(i => i.boxes > 0 && i.unitsPerBox > 0);
+}
+
+function recalc() {
+  let total = 0, pieces = 0;
+  document.querySelectorAll('#items .item-card').forEach(div => {
+    const i = readItem(div);
+    total += i.subtotal;
+    pieces += i.qty;
+    div.querySelector('.item-sub').textContent =
+      '每盒 ' + money(i.boxPrice) + ' × ' + i.boxes + ' 盒 ＝ ' + money(i.subtotal);
+  });
+  document.getElementById('total').textContent = money(total);
+  document.getElementById('pieces').textContent = '共 ' + pieces + ' 顆';
+}
+
+function showError(msg) {
+  document.getElementById('errBox').innerHTML = msg ? '<div class="err">' + esc(msg) + '</div>' : '';
+  if (msg) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function submitOrder() {
+  const customer = document.getElementById('customer').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const pickupDate = document.getElementById('pickupDate').value;
+  const pickupTime = document.getElementById('pickupTime').value;
+  const note = document.getElementById('note').value.trim();
+  const items = readAllItems();
+
+  if (!customer) { showError('請填寫姓名'); return; }
+  if (!phone) { showError('請填寫聯絡電話'); return; }
+  if (!pickupDate) { showError('請選擇取貨日期'); return; }
+  if (!items.length) { showError('請至少訂購一項，且盒數要大於 0'); return; }
+  showError('');
+
+  const total = items.reduce((s, i) => s + i.subtotal, 0);
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '送出中…';
+
+  const data = {
+    customer: customer, phone: phone,
+    pickupDate: pickupDate, pickupTime: pickupTime || '',
+    note: note, items: items, total: total,
+    status: 'new', source: 'customer',
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    await db.collection('submissions').add(data);
+    showDone(data);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '送出預訂單';
+    const code = String((e && (e.code || e.message)) || e);
+    showError('送出失敗：' + code + '　請稍後再試，或直接與店家聯繫。');
+  }
+}
+
+function showDone(d) {
+  document.getElementById('form').style.display = 'none';
+  const lines = d.items.map(i =>
+    esc(i.name) + '　' + esc(i.pack) + i.unitsPerBox + '入 × ' + i.boxes + ' 盒　' + money(i.subtotal)
+  ).join('<br>');
+  document.getElementById('done').style.display = '';
+  document.getElementById('done').innerHTML =
+    '<div class="card done">' +
+      '<div class="tick">✅</div>' +
+      '<h2>預訂單已送出</h2>' +
+      '<p>我們會盡快與您聯繫確認，謝謝！</p>' +
+      '<div class="order-box">' +
+        '<b>' + esc(d.customer) + '</b>　' + esc(d.phone) + '<br>' +
+        '取貨：' + esc(d.pickupDate) + (d.pickupTime ? ' ' + esc(d.pickupTime) : '') + '<br><br>' +
+        lines + '<br><br>' +
+        '<b>預估金額：' + money(d.total) + '</b>' +
+      '</div>' +
+      '<p style="font-size:13px;color:#8a7563">實際金額以店家確認為準</p>' +
+    '</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -1,18 +1,59 @@
 // 吉野村月餅系統 — Firestore 安全性規則
 //
-// 用法：console.firebase.google.com → 選 yoshino-mooncake 專案
-//       → 左側「Firestore Database」→ 上方「規則」分頁
-//       → 把整個編輯框的內容換成下面這段 → 按「發布」
+// ⚠️ 發布前一定要先做兩件事，否則你自己會被鎖在外面：
+//   1. Firebase 主控台 → Authentication → 開啟「電子郵件/密碼」登入方式
+//   2. 在 Users 分頁新增一個店家帳號
+//   3. 把下面 SHOP_EMAILS 裡的信箱換成你剛建立的那一個
 //
-// 注意：這段規則是「任何人只要知道網址就能讀寫」，適合店內自用。
-//       如果之後想加密碼保護，再改成需要登入的版本。
+// 貼上位置：console.firebase.google.com → yoshino-mooncake
+//          → Firestore Database → 規則 → 全部取代 → 發布
 
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // 只有這些信箱登入後才算「店家」。可以填多個，用逗號分隔。
+    function isShop() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'SHOP_EMAIL_HERE@example.com'
+        ];
+    }
+
+    // 客人送來的單只允許新增，而且欄位、長度都要合法，避免被灌垃圾資料
+    function validSubmission() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+             'customer', 'phone', 'pickupDate', 'pickupTime',
+             'note', 'items', 'total', 'createdAt', 'status', 'source'
+           ])
+        && d.customer is string && d.customer.size() > 0 && d.customer.size() <= 40
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 25
+        && d.pickupDate is string && d.pickupDate.size() <= 20
+        && d.pickupTime is string && d.pickupTime.size() <= 20
+        && d.note is string && d.note.size() <= 500
+        && d.items is list && d.items.size() > 0 && d.items.size() <= 20
+        && d.total is number && d.total >= 0 && d.total <= 1000000
+        && d.status == 'new';
+    }
+
+    // 正式訂單：只有店家看得到、改得動。客人完全碰不到。
+    match /orders/{orderId} {
+      allow read, write: if isShop();
+    }
+
+    // 客人送單區：任何人都能「新增」，但讀不到、改不了、刪不掉。
+    // 只有店家能看到內容，並決定接受或退回。
+    match /submissions/{subId} {
+      allow create: if validSubmission();
+      allow read, update, delete: if isShop();
+    }
+
+    // 品項與價格：客人的表單需要讀取才能顯示選項和金額，但只有店家能修改。
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isShop();
     }
   }
 }
