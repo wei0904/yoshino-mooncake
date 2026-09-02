@@ -154,7 +154,8 @@ textarea { resize: vertical; min-height: 70px; }
         </div>
         <div class="field">
           <label>取貨時間</label>
-          <input type="time" id="pickupTime">
+          <select id="pickupTime"></select>
+          <div class="hint">營業時間 07:00–18:00</div>
         </div>
       </div>
     </div>
@@ -211,6 +212,20 @@ const GIFT_UNITS = [6, 9, 10, 12, 15];
 const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
 const PACKS = ['禮盒', '塑膠盒', '散裝'];
 
+// 取貨時段：早上 7 點到下午 6 點，每半小時一個
+const PICKUP_START_HOUR = 7;
+const PICKUP_END_HOUR = 18;
+const PICKUP_STEP_MIN = 30;
+
+function fillPickupTimes() {
+  const out = ['<option value="">-- 選時間 --</option>'];
+  for (let m = PICKUP_START_HOUR * 60; m <= PICKUP_END_HOUR * 60; m += PICKUP_STEP_MIN) {
+    const t = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    out.push('<option value="' + t + '">' + t + '</option>');
+  }
+  document.getElementById('pickupTime').innerHTML = out.join('');
+}
+
 let db = null;
 let products = DEFAULT_PRODUCTS;
 let pricing = DEFAULT_PRICING;
@@ -235,6 +250,7 @@ db.collection('settings').doc('products').get()
   .then(() => {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form').style.display = '';
+    fillPickupTimes();
     addItem();
   });
 

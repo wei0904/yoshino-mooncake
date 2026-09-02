@@ -521,9 +521,9 @@ body { font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; backgro
         <input type="hidden" id="pickupDate">
         <div id="pickupDateHint" class="date-hint"></div>
       </div>
-      <div class="form-group" style="max-width:150px">
+      <div class="form-group" style="max-width:170px">
         <label>取貨時間</label>
-        <input type="time" id="pickupTime" step="300">
+        <select id="pickupTime"></select>
       </div>
     </div>
 
@@ -1115,6 +1115,31 @@ const GIFT_UNITS = [6, 9, 10, 12, 15];
 const PLASTIC_UNITS = [6];        // 塑膠盒固定 6 入
 const PACKS = ['禮盒', '塑膠盒', '散裝'];
 
+// 取貨時段：早上 7 點到下午 6 點，每半小時一個
+const PICKUP_START_HOUR = 7;
+const PICKUP_END_HOUR = 18;
+const PICKUP_STEP_MIN = 30;
+
+function pickupTimeOptions() {
+  const out = ['<option value="">-- 選時間 --</option>'];
+  for (let m = PICKUP_START_HOUR * 60; m <= PICKUP_END_HOUR * 60; m += PICKUP_STEP_MIN) {
+    const t = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    out.push('<option value="' + t + '">' + t + '</option>');
+  }
+  return out.join('');
+}
+
+// 帶入時間；舊訂單若有營業時段外的時間，補一個選項保留它，編輯時才不會被清掉
+function setPickupTime(val) {
+  const sel = document.getElementById('pickupTime');
+  if (!sel) return;
+  sel.innerHTML = pickupTimeOptions();
+  if (val && !Array.from(sel.options).some(o => o.value === val)) {
+    sel.insertAdjacentHTML('beforeend', '<option value="' + esc(val) + '">' + esc(val) + '（時段外）</option>');
+  }
+  sel.value = val || '';
+}
+
 // 價格規則：每顆單價 × 顆數 ＋ 盒子加價
 const DEFAULT_PRICING = { unitPrice: 55, giftSix: 30, giftOther: 50, plastic: 0 };
 
@@ -1608,8 +1633,9 @@ async function saveOrder() {
 }
 
 function resetForm() {
-  ['customerName', 'customerPhone', 'pickupTime', 'orderNote', 'depositInput', 'editingOrderId']
+  ['customerName', 'customerPhone', 'orderNote', 'depositInput', 'editingOrderId']
     .forEach(id => document.getElementById(id).value = '');
+  setPickupTime('');
   setPickupDate('');
   document.getElementById('orderItems').innerHTML = '';
   document.getElementById('formTitle').textContent = '新增訂單';
@@ -1629,7 +1655,7 @@ function editOrder(id) {
   document.getElementById('customerName').value = order.customer || '';
   document.getElementById('customerPhone').value = order.phone || '';
   setPickupDate(order.pickupDate || '');
-  document.getElementById('pickupTime').value = order.pickupTime || '';
+  setPickupTime(order.pickupTime || '');
   document.getElementById('orderNote').value = order.note || '';
   document.getElementById('depositInput').value = order.deposit || '';
   document.getElementById('orderItems').innerHTML = '';
@@ -2265,6 +2291,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ===== Init =====
+setPickupTime('');
 addItemRow();
 recalcTotals();
 renderOrders();
